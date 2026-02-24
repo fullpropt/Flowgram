@@ -15,6 +15,7 @@ export default function IdeasPage() {
   const cards = useAppStore((state) => state.cards);
   const hydrated = useAppStore((state) => state.hydrated);
   const openCardModal = useAppStore((state) => state.openCardModal);
+  const updateCard = useAppStore((state) => state.updateCard);
   const duplicateCard = useAppStore((state) => state.duplicateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
 
@@ -165,6 +166,7 @@ export default function IdeasPage() {
       <CardPreviewModal
         card={previewCard}
         onEdit={previewCard ? () => openCardModal(previewCard.id) : undefined}
+        onQuickRename={(cardId, nextTitle) => updateCard(cardId, { titulo: nextTitle })}
         onOpenChange={(open) => {
           if (!open) setPreviewCardId(null);
         }}

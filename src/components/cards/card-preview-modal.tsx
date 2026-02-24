@@ -1,18 +1,20 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CanalSymbol } from "@/components/ui/canal-symbol";
 import { FormatoSymbol } from "@/components/ui/formato-symbol";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { IdeaCard } from "@/types/models";
+import { Canal, IdeaCard } from "@/types/models";
 
 const pilarTone: Partial<Record<NonNullable<IdeaCard["pilar"]>, string>> = {
   Dor: "from-[#ff6b8f] to-[#ff925a]",
@@ -26,6 +28,9 @@ interface CardPreviewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: () => void;
+  onQuickRename?: (cardId: string, nextTitle: string) => void;
+  canal?: Canal;
+  extraActions?: React.ReactNode;
 }
 
 export function CardPreviewModal({
@@ -33,7 +38,50 @@ export function CardPreviewModal({
   open,
   onOpenChange,
   onEdit,
+  onQuickRename,
+  canal,
+  extraActions,
 }: CardPreviewModalProps) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsEditingTitle(false);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTitleDraft(card?.titulo ?? "");
+  }, [card?.id, card?.titulo, open]);
+
+  useEffect(() => {
+    if (!isEditingTitle) return;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
+  }, [isEditingTitle]);
+
+  function commitTitleEdit() {
+    if (!card) return;
+
+    const nextTitle = titleDraft.trim();
+    if (!nextTitle) {
+      setTitleDraft(card.titulo);
+      setIsEditingTitle(false);
+      return;
+    }
+
+    if (nextTitle !== card.titulo) {
+      onQuickRename?.(card.id, nextTitle);
+    }
+
+    setIsEditingTitle(false);
+  }
+
+  function cancelTitleEdit() {
+    if (!card) return;
+    setTitleDraft(card.titulo);
+    setIsEditingTitle(false);
+  }
+
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-2xl overflow-hidden p-0">
@@ -52,18 +100,51 @@ export function CardPreviewModal({
                   <Badge className="border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]">
                     {statusLabel[card.status]}
                   </Badge>
+                  {canal ? (
+                    <span title={`Canal: ${canal}`}>
+                      <Badge className="border-[#4d356f] bg-[rgba(31,19,51,0.82)] text-[#e7d7ff]">
+                        <CanalSymbol canal={canal} />
+                      </Badge>
+                    </span>
+                  ) : null}
                   {card.pilar ? (
                     <Badge className="border-[#4c356d] bg-[rgba(31,19,51,0.82)] text-[#e7d7ff]">
                       Pilar: {pilarLabel[card.pilar]}
                     </Badge>
                   ) : null}
                 </div>
-                <DialogTitle className="text-xl leading-tight text-[var(--foreground)]">
-                  {card.titulo}
-                </DialogTitle>
-                <DialogDescription className="text-[var(--muted)]">
-                  Visualizacao resumida do card. Use editar para alterar os dados.
-                </DialogDescription>
+                {isEditingTitle ? (
+                  <div className="pt-1">
+                    <Input
+                      className="h-11 text-lg font-bold"
+                      onBlur={commitTitleEdit}
+                      onChange={(event) => setTitleDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitTitleEdit();
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelTitleEdit();
+                        }
+                      }}
+                      ref={titleInputRef}
+                      value={titleDraft}
+                    />
+                  </div>
+                ) : (
+                  <DialogTitle asChild>
+                    <button
+                      className="cursor-text text-left text-xl leading-tight font-semibold text-[var(--foreground)] underline-offset-4 hover:underline"
+                      onClick={() => setIsEditingTitle(true)}
+                      title="Clique para editar o titulo rapidamente"
+                      type="button"
+                    >
+                      {card.titulo}
+                    </button>
+                  </DialogTitle>
+                )}
               </DialogHeader>
 
               {card.descricao ? (
@@ -116,6 +197,7 @@ export function CardPreviewModal({
               </div>
 
               <div className="flex flex-wrap justify-end gap-2">
+                {extraActions}
                 <Button onClick={() => onOpenChange(false)} variant="outline">
                   Fechar
                 </Button>

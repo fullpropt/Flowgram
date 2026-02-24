@@ -12,18 +12,12 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { X } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
+import { CardPreviewModal } from "@/components/cards/card-preview-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CanalSymbol } from "@/components/ui/canal-symbol";
 import { PILARES } from "@/lib/constants";
 import { useAppStore } from "@/store/app-store";
-import { CalendarPost, Pilar } from "@/types/models";
+import { CalendarPost, Canal, Pilar } from "@/types/models";
 
 interface CalendarEvent {
   id: string;
@@ -52,7 +46,7 @@ function singleDayEventEnd(startIso: string) {
 function normalizePostDate(start: Date, view: View) {
   const next = new Date(start);
 
-  // In month view, dropping/selecting can produce all-day ranges.
+  // In month view, dropping can produce all-day ranges.
   // Force a fixed daytime time so the event always stays in a single day.
   if (view === "month") {
     next.setHours(9, 0, 0, 0);
@@ -65,8 +59,13 @@ function CalendarEventContent({
   event,
   onDelete,
 }: EventProps<CalendarEvent> & { onDelete: (eventId: string) => void }) {
+  const canal = event.resource?.canal ?? "Feed";
+
   return (
     <div className="flex w-full items-center gap-1">
+      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[rgba(18,10,31,0.22)]">
+        <CanalSymbol canal={canal} className="text-[#160a1f]" />
+      </span>
       <span className="min-w-0 flex-1 truncate">{event.title}</span>
       <button
         className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[rgba(18,10,31,0.28)] text-[#160a1f] transition hover:bg-[rgba(18,10,31,0.4)]"
@@ -92,16 +91,21 @@ export function CalendarView() {
   const cards = useAppStore((state) => state.cards);
   const calendarPosts = useAppStore((state) => state.calendarPosts);
   const addCalendarPost = useAppStore((state) => state.addCalendarPost);
+  const updateCard = useAppStore((state) => state.updateCard);
   const updateCalendarPost = useAppStore((state) => state.updateCalendarPost);
   const deleteCalendarPost = useAppStore((state) => state.deleteCalendarPost);
   const markCardStatus = useAppStore((state) => state.markCardStatus);
+  const openCardModal = useAppStore((state) => state.openCardModal);
 
   const [currentView, setCurrentView] = useState<View>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [notesDraft, setNotesDraft] = useState("");
   const [availablePilarFilter, setAvailablePilarFilter] = useState<Pilar | "">("");
+  const [previewState, setPreviewState] = useState<{
+    cardId: string;
+    canal?: Canal;
+    calendarPostId?: string;
+  } | null>(null);
 
   const draggedCard = cards.find((card) => card.id === draggedCardId);
 
@@ -109,7 +113,7 @@ export function CalendarView() {
     () =>
       calendarPosts.map((post) => ({
         id: post.id,
-        title: `${post.titulo} (${post.canal})`,
+        title: post.titulo,
         start: new Date(post.dataInicio),
         end: singleDayEventEnd(post.dataInicio),
         allDay: false,
@@ -118,9 +122,9 @@ export function CalendarView() {
     [calendarPosts],
   );
 
-  const selectedPost = useMemo(
-    () => calendarPosts.find((post) => post.id === selectedPostId),
-    [calendarPosts, selectedPostId],
+  const previewCard = useMemo(
+    () => cards.find((card) => card.id === previewState?.cardId) ?? null,
+    [cards, previewState],
   );
 
   const unscheduledCards = useMemo(() => {
@@ -129,6 +133,7 @@ export function CalendarView() {
         .map((post) => post.ideaCardId)
         .filter((id): id is string => Boolean(id)),
     );
+
     return cards.filter((card) => {
       if (scheduledCardIds.has(card.id)) return false;
       if (!availablePilarFilter) return true;
@@ -204,8 +209,9 @@ export function CalendarView() {
               compact
               draggable
               key={card.id}
-              onClick={() => undefined}
+              onClick={() => setPreviewState({ cardId: card.id })}
               onDragStart={() => setDraggedCardId(card.id)}
+              onEdit={() => openCardModal(card.id)}
               showActions={false}
             />
           ))}
@@ -229,7 +235,7 @@ export function CalendarView() {
                   {...props}
                   onDelete={(eventId) => {
                     deleteCalendarPost(eventId);
-                    if (selectedPostId === eventId) setSelectedPostId(null);
+                    if (previewState?.calendarPostId === eventId) setPreviewState(null);
                   }}
                 />
               ),
@@ -239,11 +245,18 @@ export function CalendarView() {
               draggedCard
                 ? {
                     id: draggedCard.id,
-                    title: `${draggedCard.titulo} (${draggedCard.camadas.formato ?? "Feed"})`,
+                    title: draggedCard.titulo,
                     start: new Date(),
                     end: addMinutes(new Date(), 30),
                     allDay: false,
-                    resource: {} as CalendarPost,
+                    resource: {
+                      canal:
+                        draggedCard.camadas.formato === "Reels"
+                          ? "Reels"
+                          : draggedCard.camadas.formato === "Story"
+                            ? "Story"
+                            : "Feed",
+                    } as CalendarPost,
                   }
                 : (null as unknown as CalendarEvent)
             }
@@ -269,8 +282,12 @@ export function CalendarView() {
             onEventDrop={handleMoveEvent}
             onNavigate={(newDate) => setCurrentDate(newDate)}
             onSelectEvent={(event) => {
-              setSelectedPostId(event.id);
-              setNotesDraft(event.resource.observacoes ?? "");
+              if (!event.resource.ideaCardId) return;
+              setPreviewState({
+                cardId: event.resource.ideaCardId,
+                canal: event.resource.canal,
+                calendarPostId: event.id,
+              });
             }}
             onView={setCurrentView}
             popup
@@ -283,78 +300,44 @@ export function CalendarView() {
         </DndProvider>
       </section>
 
-      <Dialog
-        onOpenChange={(open) => {
-          if (!open) setSelectedPostId(null);
+      <CardPreviewModal
+        canal={previewState?.canal}
+        card={previewCard}
+        extraActions={
+          previewState?.calendarPostId ? (
+            <>
+              <Button
+                onClick={() => {
+                  deleteCalendarPost(previewState.calendarPostId!);
+                  setPreviewState(null);
+                }}
+                variant="danger"
+              >
+                Remover post
+              </Button>
+              <Button
+                onClick={() => {
+                  markCardStatus(previewState.cardId, "Publicado");
+                  setPreviewState(null);
+                }}
+              >
+                Marcar como Publicado
+              </Button>
+            </>
+          ) : null
+        }
+        onEdit={previewCard ? () => openCardModal(previewCard.id) : undefined}
+        onQuickRename={(cardId, nextTitle) => {
+          updateCard(cardId, { titulo: nextTitle });
+          if (previewState?.calendarPostId) {
+            updateCalendarPost(previewState.calendarPostId, { titulo: nextTitle });
+          }
         }}
-        open={Boolean(selectedPost)}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Post</DialogTitle>
-            <DialogDescription>
-              Atualize observacoes e avance o status para publicado.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedPost ? (
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                  Titulo
-                </p>
-                <p className="text-sm text-[var(--foreground)]">{selectedPost.titulo}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                  Canal
-                </p>
-                <p className="text-sm text-[var(--foreground)]">{selectedPost.canal}</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                  Observacoes
-                </label>
-                <Input
-                  onChange={(event) => setNotesDraft(event.target.value)}
-                  value={notesDraft}
-                />
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  onClick={() => {
-                    deleteCalendarPost(selectedPost.id);
-                    setSelectedPostId(null);
-                  }}
-                  variant="danger"
-                >
-                  Remover post
-                </Button>
-                <Button
-                  onClick={() => {
-                    updateCalendarPost(selectedPost.id, { observacoes: notesDraft });
-                    setSelectedPostId(null);
-                  }}
-                  variant="outline"
-                >
-                  Salvar observacoes
-                </Button>
-                {selectedPost.ideaCardId ? (
-                  <Button
-                    onClick={() => {
-                      markCardStatus(selectedPost.ideaCardId!, "Publicado");
-                      setSelectedPostId(null);
-                    }}
-                  >
-                    Marcar como Publicado
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => {
+          if (!open) setPreviewState(null);
+        }}
+        open={Boolean(previewCard)}
+      />
     </div>
   );
 }
