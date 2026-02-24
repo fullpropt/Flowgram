@@ -98,7 +98,7 @@ export function CardModal() {
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Titulo
             </label>
             <Input
@@ -112,7 +112,7 @@ export function CardModal() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Descricao
             </label>
             <Textarea
@@ -148,12 +148,12 @@ export function CardModal() {
           </div>
 
           <div className="panel-soft p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Camadas
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs text-slate-500">Macro Tema</label>
+                <label className="text-xs text-[var(--muted)]">Macro Tema</label>
                 <Input
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -198,7 +198,7 @@ export function CardModal() {
                 value={form.camadas?.objetivo}
               />
               <div className="space-y-2">
-                <label className="text-xs text-slate-500">Hook</label>
+                <label className="text-xs text-[var(--muted)]">Hook</label>
                 <Input
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -212,7 +212,7 @@ export function CardModal() {
             </div>
 
             <div className="mt-3 space-y-2">
-              <label className="text-xs text-slate-500">CTA</label>
+              <label className="text-xs text-[var(--muted)]">CTA</label>
               <Input
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -226,7 +226,7 @@ export function CardModal() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Tags (separadas por virgula)
             </label>
             <Input
@@ -283,9 +283,9 @@ function SelectField({
 }: SelectFieldProps) {
   return (
     <div className="space-y-2">
-      <label className="text-xs text-slate-500">{label}</label>
+      <label className="text-xs text-[var(--muted)]">{label}</label>
       <select
-        className="flex h-10 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[#e6edff]"
+        className="flex h-10 w-full rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
         onChange={(event) => onChange(event.target.value)}
         value={value ?? ""}
       >

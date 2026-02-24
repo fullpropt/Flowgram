@@ -77,18 +77,20 @@ export function AuthForm() {
   }
 
   return (
-    <div className="panel mx-auto w-full max-w-md p-6">
+    <div className="panel mx-auto w-full max-w-md p-6 md:p-7">
       <div className="mb-5 space-y-2 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Flowgram</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">Flowgram</h1>
+        <p className="text-sm text-[var(--muted)]">
           Planejador visual de conteudo para Instagram
         </p>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-[#eff3fb] p-1">
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-[var(--border)] bg-[rgba(21,13,38,0.8)] p-1">
         <button
           className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-            mode === "login" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
+            mode === "login"
+              ? "bg-[linear-gradient(135deg,rgba(248,87,178,0.3),rgba(168,60,255,0.28),rgba(255,154,60,0.22))] text-[#ffe3f8] shadow-sm"
+              : "text-[#bfa8df]"
           }`}
           onClick={() => setMode("login")}
           type="button"
@@ -97,7 +99,9 @@ export function AuthForm() {
         </button>
         <button
           className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-            mode === "register" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
+            mode === "register"
+              ? "bg-[linear-gradient(135deg,rgba(248,87,178,0.3),rgba(168,60,255,0.28),rgba(255,154,60,0.22))] text-[#ffe3f8] shadow-sm"
+              : "text-[#bfa8df]"
           }`}
           onClick={() => setMode("register")}
           type="button"
@@ -132,7 +136,7 @@ export function AuthForm() {
         />
 
         {erro ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg border border-[#6c2f5a] bg-[rgba(72,20,55,0.72)] px-3 py-2 text-sm text-[#ff9cc8]">
             {erro}
           </p>
         ) : null}

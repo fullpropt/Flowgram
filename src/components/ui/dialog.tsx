@@ -17,7 +17,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-[2px]",
+        "fixed inset-0 z-50 bg-[#05030a]/75 backdrop-blur-[3px]",
         className,
       )}
       {...props}
@@ -35,13 +35,13 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--border)] bg-white p-5 shadow-[0_20px_40px_rgba(15,23,42,0.18)]",
+          "fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--border)] bg-[rgba(15,10,30,0.94)] p-5 shadow-[0_28px_60px_rgba(5,3,10,0.72)]",
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100">
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1.5 text-[var(--muted)] transition hover:bg-[rgba(255,255,255,0.08)]">
           <X className="h-4 w-4" />
           <span className="sr-only">Fechar</span>
         </DialogPrimitive.Close>
@@ -63,7 +63,7 @@ function DialogTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-lg font-semibold text-slate-900", className)}
+      className={cn("text-lg font-semibold text-[var(--foreground)]", className)}
       {...props}
     />
   );
@@ -75,7 +75,7 @@ function DialogDescription({
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-sm text-slate-500", className)}
+      className={cn("text-sm text-[var(--muted)]", className)}
       {...props}
     />
   );

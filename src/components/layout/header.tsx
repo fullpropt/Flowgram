@@ -33,14 +33,14 @@ export function Header() {
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-white/75 px-4 py-4 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[rgba(11,7,20,0.7)] px-4 py-4 backdrop-blur md:px-6">
       <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
             Flowgram
           </p>
-          <h1 className="text-lg font-bold text-slate-900">{routeData.title}</h1>
-          <p className="hidden text-sm text-slate-500 md:block">{routeData.subtitle}</p>
+          <h1 className="text-lg font-bold text-[var(--foreground)]">{routeData.title}</h1>
+          <p className="hidden text-sm text-[var(--muted)] md:block">{routeData.subtitle}</p>
         </div>
 
         <div className="flex items-center gap-2">

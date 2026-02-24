@@ -48,15 +48,15 @@ export default function OrganizePage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Planejamento inteligente
             </p>
-            <h2 className="text-xl font-bold text-slate-900">Gerar Semana</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-xl font-bold text-[var(--foreground)]">Gerar Semana</h2>
+            <p className="text-sm text-[var(--muted)]">
               Sugere Dor, Educacao e Solucao. Construcao e opcional.
             </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                 Inicio
               </label>
               <Input
@@ -66,7 +66,7 @@ export default function OrganizePage() {
               />
             </div>
 
-            <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-slate-700">
+            <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)]">
               <input
                 checked={includeConstrucao}
                 onChange={(event) => setIncludeConstrucao(event.target.checked)}
@@ -93,7 +93,7 @@ export default function OrganizePage() {
 
         {suggestions.length > 0 ? (
           <div className="panel-soft mt-4 space-y-3 p-3">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               Sugestoes para{" "}
               <strong>
                 {format(new Date(startDate), "dd/MM", { locale: ptBR })} ate{" "}
@@ -135,7 +135,7 @@ export default function OrganizePage() {
           onOpenCard={(cardId) => openCardModal(cardId)}
         />
       ) : (
-        <div className="panel p-5 text-sm text-slate-500">Carregando board...</div>
+        <div className="panel p-5 text-sm text-[var(--muted)]">Carregando board...</div>
       )}
     </div>
   );

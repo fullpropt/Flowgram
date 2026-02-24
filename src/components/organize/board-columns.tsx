@@ -116,13 +116,13 @@ function BoardColumn({
     <section
       className={cn(
         "panel-soft p-3",
-        isOver && "border-[#8ca8ff] bg-[#f4f8ff]",
+        isOver && "border-[#a862dc] bg-[rgba(44,26,71,0.95)]",
       )}
       ref={setNodeRef}
     >
       <header className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2">
-        <h3 className="text-sm font-bold text-slate-800">{pilar}</h3>
-        <span className="rounded-full border border-[#d7e2fb] bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+        <h3 className="text-sm font-bold text-[var(--foreground)]">{pilar}</h3>
+        <span className="rounded-full border border-[#5e3b83] bg-[rgba(22,14,39,0.85)] px-2 py-0.5 text-[11px] font-semibold text-[#d9c6f8]">
           {cardCount}
         </span>
       </header>

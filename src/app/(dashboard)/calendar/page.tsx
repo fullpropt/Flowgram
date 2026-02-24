@@ -8,7 +8,7 @@ export default function CalendarPage() {
 
   if (!hydrated) {
     return (
-      <div className="rounded-2xl border border-[var(--border)] bg-white p-5 text-sm text-slate-500">
+      <div className="panel p-5 text-sm text-[var(--muted)]">
         Carregando calendario...
       </div>
     );

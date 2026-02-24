@@ -11,13 +11,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_6px_18px_rgba(34,75,204,0.24)] hover:-translate-y-[1px] hover:shadow-[0_8px_20px_rgba(34,75,204,0.3)]",
+    "bg-[linear-gradient(135deg,var(--glow-pink),var(--glow-purple),var(--glow-orange))] text-[var(--primary-foreground)] shadow-[0_10px_24px_rgba(248,87,178,0.35)] hover:-translate-y-[1px] hover:shadow-[0_12px_28px_rgba(248,87,178,0.45)]",
   secondary:
-    "bg-[var(--secondary)] text-[var(--foreground)] hover:bg-[#dfe8ff] hover:-translate-y-[1px]",
+    "bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[#2e1b49] hover:-translate-y-[1px]",
   outline:
-    "border border-[var(--border)] bg-white text-[var(--foreground)] hover:bg-[var(--accent)]",
-  ghost: "text-[var(--foreground)] hover:bg-[#f1f5f9]",
-  danger: "bg-[var(--danger)] text-white hover:-translate-y-[1px] hover:opacity-95",
+    "border border-[var(--border)] bg-[rgba(23,14,40,0.78)] text-[var(--foreground)] hover:bg-[var(--accent)]",
+  ghost: "text-[var(--foreground)] hover:bg-[rgba(255,255,255,0.06)]",
+  danger:
+    "bg-[linear-gradient(135deg,#ff547d,#ff7a5f)] text-white shadow-[0_8px_22px_rgba(255,84,125,0.35)] hover:-translate-y-[1px]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -51,8 +51,8 @@ export default function IdeasPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
               Visao geral
             </p>
-            <h2 className="mt-1 text-xl font-bold text-slate-900">Cards de Conteudo</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Cards de Conteudo</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
               Filtre, edite e organize suas ideias de forma rapida.
             </p>
           </div>
@@ -105,7 +105,7 @@ export default function IdeasPage() {
       </section>
 
       {!hydrated ? (
-        <div className="panel p-5 text-sm text-slate-500">Carregando cards...</div>
+        <div className="panel p-5 text-sm text-[var(--muted)]">Carregando cards...</div>
       ) : null}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -121,7 +121,7 @@ export default function IdeasPage() {
       </section>
 
       {hydrated && filteredCards.length === 0 ? (
-        <section className="panel-soft p-10 text-center text-sm text-slate-500">
+        <section className="panel-soft p-10 text-center text-sm text-[var(--muted)]">
           Nenhum card encontrado com os filtros atuais.
         </section>
       ) : null}
@@ -142,7 +142,7 @@ function FilterSelect({
 }) {
   return (
     <select
-      className="h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[#e6edff]"
+      className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
       onChange={(event) => onChange(event.target.value)}
       value={value}
     >
@@ -166,12 +166,12 @@ function StatChip({
   icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-white px-3 py-2">
+    <div className="rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 py-2">
       <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      <p className="text-base font-bold text-slate-900">{value}</p>
+      <p className="text-base font-bold text-[var(--foreground)]">{value}</p>
     </div>
   );
 }

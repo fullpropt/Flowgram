@@ -3,19 +3,22 @@
 @import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 
 :root {
-  --background: #f3f5fb;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --muted: #64748b;
-  --muted-soft: #94a3b8;
-  --border: #dde4f0;
-  --ring: #c7d7ff;
-  --primary: #224bcc;
-  --primary-foreground: #ffffff;
-  --secondary: #e8efff;
-  --accent: #f5f8ff;
-  --danger: #dc2626;
+  --background: #08050f;
+  --foreground: #f5efff;
+  --card: rgba(16, 11, 32, 0.78);
+  --card-foreground: #f5efff;
+  --muted: #c6b7e1;
+  --muted-soft: #8f7cae;
+  --border: #3a2a57;
+  --ring: #f957c0;
+  --primary: #f44cc8;
+  --primary-foreground: #140818;
+  --secondary: #24143b;
+  --accent: #2c1a47;
+  --danger: #ff547d;
+  --glow-pink: #f857b2;
+  --glow-purple: #a83cff;
+  --glow-orange: #ff9a3c;
 }
 
 @theme inline {
@@ -29,8 +32,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   background-image:
-    radial-gradient(circle at 5% 0%, rgba(34, 75, 204, 0.08), transparent 28%),
-    radial-gradient(circle at 95% 100%, rgba(148, 163, 184, 0.1), transparent 26%);
+    radial-gradient(circle at 14% 12%, rgba(248, 87, 178, 0.35), transparent 24%),
+    radial-gradient(circle at 86% 10%, rgba(168, 60, 255, 0.28), transparent 28%),
+    radial-gradient(circle at 80% 86%, rgba(255, 154, 60, 0.16), transparent 24%),
+    linear-gradient(160deg, #08050f 0%, #0f0921 36%, #120a1f 100%);
   min-height: 100vh;
 }
 
@@ -42,18 +47,24 @@ body {
   border: 1px solid var(--border);
   border-radius: 1rem;
   background: var(--card);
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 14px 34px rgba(3, 2, 7, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .panel-soft {
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+  background:
+    linear-gradient(170deg, rgba(33, 21, 55, 0.9), rgba(19, 13, 36, 0.9)),
+    linear-gradient(120deg, rgba(248, 87, 178, 0.08), rgba(168, 60, 255, 0.08));
+  backdrop-filter: blur(12px);
 }
 
 .rbc-toolbar button {
   border: 1px solid var(--border);
-  background: white;
+  background: rgba(24, 14, 42, 0.8);
   border-radius: 0.75rem;
   color: var(--foreground);
   height: 2.2rem;
@@ -64,37 +75,52 @@ body {
 
 .rbc-toolbar button:hover,
 .rbc-toolbar button:focus {
-  background: #eff4ff;
+  background: rgba(43, 27, 73, 0.95);
 }
 
 .rbc-toolbar button.rbc-active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+  background: linear-gradient(
+    135deg,
+    rgba(248, 87, 178, 0.95),
+    rgba(168, 60, 255, 0.95),
+    rgba(255, 154, 60, 0.9)
+  );
+  border-color: transparent;
+  color: #15091b;
+  box-shadow: 0 6px 16px rgba(248, 87, 178, 0.34);
 }
 
 .rbc-event {
-  background: var(--primary);
+  background: linear-gradient(
+    135deg,
+    rgba(248, 87, 178, 0.95),
+    rgba(168, 60, 255, 0.95),
+    rgba(255, 154, 60, 0.9)
+  );
   border: 0;
   border-radius: 0.65rem;
   padding: 0.15rem 0.35rem;
   font-size: 0.8rem;
+  color: #160a1f;
+  font-weight: 700;
 }
 
 .rbc-today {
-  background: #edf2ff;
+  background: rgba(248, 87, 178, 0.09);
 }
 
 .rbc-off-range-bg {
-  background: #f9fbff;
+  background: rgba(11, 8, 20, 0.72);
 }
 
 .rbc-calendar {
-  background: white;
+  background: rgba(16, 11, 32, 0.82);
   border-radius: 1rem;
   border: 1px solid var(--border);
   padding: 1rem;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  color: var(--foreground);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 30px rgba(3, 2, 7, 0.45);
 }
 
 .rbc-toolbar {
@@ -115,5 +141,27 @@ body {
 }
 
 .rbc-month-row + .rbc-month-row {
-  border-top-color: #e9eef7;
+  border-top-color: rgba(77, 58, 110, 0.7);
+}
+
+.rbc-day-bg + .rbc-day-bg,
+.rbc-header + .rbc-header,
+.rbc-time-content > * + * > * {
+  border-left-color: rgba(77, 58, 110, 0.45) !important;
+}
+
+.rbc-time-header-content,
+.rbc-time-content,
+.rbc-timeslot-group,
+.rbc-month-row,
+.rbc-day-bg {
+  border-color: rgba(77, 58, 110, 0.45) !important;
+}
+
+.rbc-date-cell {
+  color: #d9c9f5;
+}
+
+.rbc-button-link {
+  color: inherit;
 }

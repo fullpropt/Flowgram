@@ -128,8 +128,8 @@ export function CalendarView() {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_1fr]">
       <section className="panel h-fit p-4">
-        <h2 className="mb-1 text-sm font-bold text-slate-900">Cards nao agendados</h2>
-        <p className="mb-4 text-xs leading-relaxed text-slate-500">
+        <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards nao agendados</h2>
+        <p className="mb-4 text-xs leading-relaxed text-[var(--muted)]">
           Arraste um card para uma data no calendario.
         </p>
 
@@ -146,7 +146,7 @@ export function CalendarView() {
             />
           ))}
           {unscheduledCards.length === 0 ? (
-            <p className="rounded-xl border border-[var(--border)] bg-slate-50 px-3 py-4 text-sm text-slate-500">
+            <p className="rounded-xl border border-[var(--border)] bg-[rgba(20,12,34,0.85)] px-3 py-4 text-sm text-[var(--muted)]">
               Todos os cards ja estao agendados.
             </p>
           ) : null}
@@ -217,19 +217,19 @@ export function CalendarView() {
           {selectedPost ? (
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                   Titulo
                 </p>
-                <p className="text-sm">{selectedPost.titulo}</p>
+                <p className="text-sm text-[var(--foreground)]">{selectedPost.titulo}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                   Canal
                 </p>
-                <p className="text-sm">{selectedPost.canal}</p>
+                <p className="text-sm text-[var(--foreground)]">{selectedPost.canal}</p>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                   Observacoes
                 </label>
                 <Input
