@@ -1,0 +1,70 @@
+@import "tailwindcss";
+@import "react-big-calendar/lib/css/react-big-calendar.css";
+@import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+
+:root {
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #64748b;
+  --border: #dbe2ee;
+  --primary: #1f4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #edf2ff;
+  --danger: #dc2626;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+* {
+  border-color: var(--border);
+}
+
+.rbc-toolbar button {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 0.6rem;
+  color: var(--foreground);
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button:focus {
+  background: #edf2ff;
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #1f4ed8;
+  border-color: #1f4ed8;
+  color: white;
+}
+
+.rbc-event {
+  background: #1f4ed8;
+  border: 0;
+  border-radius: 0.5rem;
+}
+
+.rbc-today {
+  background: #eef3ff;
+}
+
+.rbc-off-range-bg {
+  background: #f8fafc;
+}
+
+.rbc-calendar {
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+}
