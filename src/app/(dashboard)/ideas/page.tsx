@@ -1,8 +1,9 @@
 "use client";
 
 import { type ComponentType, useMemo, useState } from "react";
-import { FileText, Funnel, Search } from "lucide-react";
+import { ChevronDown, FileText, Funnel, Search } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
+import { BoardColumns } from "@/components/organize/board-columns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FORMATOS, PILARES, STATUSES } from "@/lib/constants";
@@ -20,6 +21,7 @@ export default function IdeasPage() {
   const [pilarFilter, setPilarFilter] = useState<Pilar | "">("");
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | "">("");
   const [formatFilter, setFormatFilter] = useState<Formato | "">("");
+  const [showOrganizeBoard, setShowOrganizeBoard] = useState(false);
 
   const filteredCards = useMemo(() => {
     const term = search.toLowerCase().trim();
@@ -41,6 +43,11 @@ export default function IdeasPage() {
   const agendados = useMemo(
     () => cards.filter((card) => card.status === "Agendado").length,
     [cards],
+  );
+
+  const boardCards = useMemo(
+    () => filteredCards.filter((card) => Boolean(card.pilar)),
+    [filteredCards],
   );
 
   return (
@@ -118,6 +125,53 @@ export default function IdeasPage() {
             onDuplicate={() => duplicateCard(card.id)}
           />
         ))}
+      </section>
+
+      <section className="panel-soft p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+              Organizacao integrada
+            </p>
+            <h3 className="text-base font-bold text-[var(--foreground)]">
+              Organizar por pilares no Banco de Ideias
+            </h3>
+            <p className="text-sm text-[var(--muted)]">
+              Visualize e ajuste os grupos sem sair desta tela.
+            </p>
+          </div>
+
+          <Button
+            aria-expanded={showOrganizeBoard}
+            onClick={() => setShowOrganizeBoard((current) => !current)}
+            variant="outline"
+          >
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${showOrganizeBoard ? "rotate-180" : ""}`}
+            />
+            {showOrganizeBoard ? "Recolher" : "Expandir"}
+          </Button>
+        </div>
+
+        {showOrganizeBoard ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-xs text-[var(--muted)]">
+              {boardCards.length} card(s) com pilar definido considerando os filtros atuais.
+            </p>
+
+            {hydrated ? (
+              boardCards.length > 0 ? (
+                <BoardColumns cards={boardCards} onOpenCard={(cardId) => openCardModal(cardId)} />
+              ) : (
+                <div className="panel p-5 text-sm text-[var(--muted)]">
+                  Nenhum card com pilar definido para organizar com os filtros atuais.
+                </div>
+              )
+            ) : (
+              <div className="panel p-5 text-sm text-[var(--muted)]">Carregando board...</div>
+            )}
+          </div>
+        ) : null}
       </section>
 
       {hydrated && filteredCards.length === 0 ? (

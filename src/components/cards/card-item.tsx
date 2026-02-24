@@ -1,6 +1,7 @@
 "use client";
 
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Copy, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatoLabel, objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
@@ -12,6 +13,8 @@ interface CardItemProps {
   className?: string;
   compact?: boolean;
   showActions?: boolean;
+  collapsible?: boolean;
+  defaultExpanded?: boolean;
   draggable?: boolean;
   onClick?: () => void;
   onDuplicate?: () => void;
@@ -31,12 +34,17 @@ export function CardItem({
   className,
   compact = false,
   showActions = true,
+  collapsible = true,
+  defaultExpanded = false,
   draggable = false,
   onClick,
   onDuplicate,
   onDelete,
   onDragStart,
 }: CardItemProps) {
+  const canCollapse = collapsible && !compact;
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
   return (
     <article
       className={cn(
@@ -60,26 +68,44 @@ export function CardItem({
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-bold text-[var(--foreground)]">{card.titulo}</h3>
           {card.descricao && !compact ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--muted)]">
+            <p
+              className={cn(
+                "mt-1 text-xs leading-relaxed text-[var(--muted)]",
+                isExpanded ? "line-clamp-4" : "line-clamp-2",
+              )}
+            >
               {card.descricao}
             </p>
           ) : null}
         </div>
-        {showActions ? (
-          <div
-            className="flex items-center gap-1 opacity-80 transition group-hover:opacity-100"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Button onClick={onDuplicate} size="icon" title="Duplicar" variant="ghost">
-              <Copy className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
+          {canCollapse ? (
+            <Button
+              aria-expanded={isExpanded}
+              onClick={() => setIsExpanded((current) => !current)}
+              size="icon"
+              title={isExpanded ? "Recolher detalhes" : "Expandir detalhes"}
+              variant="ghost"
+            >
+              <ChevronDown
+                className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-180")}
+              />
             </Button>
-            <Button onClick={onDelete} size="icon" title="Excluir" variant="ghost">
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-            </Button>
-          </div>
-        ) : (
-          <Pencil className="mt-0.5 h-4 w-4 text-[#8063aa]" />
-        )}
+          ) : null}
+
+          {showActions ? (
+            <div className="flex items-center gap-1 opacity-80 transition group-hover:opacity-100">
+              <Button onClick={onDuplicate} size="icon" title="Duplicar" variant="ghost">
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button onClick={onDelete} size="icon" title="Excluir" variant="ghost">
+                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+              </Button>
+            </div>
+          ) : (
+            <Pencil className="mt-0.5 h-4 w-4 text-[#8063aa]" />
+          )}
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -89,7 +115,12 @@ export function CardItem({
         </Badge>
       </div>
 
-      <div className="space-y-2 text-xs text-[#ccbde7]">
+      <div
+        className={cn(
+          "space-y-2 text-xs text-[#ccbde7]",
+          canCollapse && !isExpanded && "hidden",
+        )}
+      >
         {card.camadas.macroTema ? (
           <p className="line-clamp-1">
             <span className="font-semibold text-[#f3e9ff]">Macro tema:</span>{" "}
@@ -109,6 +140,10 @@ export function CardItem({
           </p>
         ) : null}
       </div>
+
+      {canCollapse && !isExpanded ? (
+        <p className="mt-1 text-[11px] font-medium text-[#bca6de]">Toque na seta para ver detalhes</p>
+      ) : null}
     </article>
   );
 }

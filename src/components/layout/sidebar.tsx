@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, KanbanSquare, Lightbulb, Sparkles } from "lucide-react";
+import { CalendarDays, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -11,12 +11,6 @@ const navigationItems = [
     label: "Banco de Ideias",
     description: "Capture e refine temas",
     icon: Lightbulb,
-  },
-  {
-    href: "/organize",
-    label: "Organizar",
-    description: "Distribua por pilares",
-    icon: KanbanSquare,
   },
   {
     href: "/calendar",
