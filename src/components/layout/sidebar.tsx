@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { CalendarDays, Lightbulb, Sparkles } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { getSession, signOut } from "next-auth/react";
+import { CalendarDays, Lightbulb, LogOut, Settings, Sparkles, UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -29,10 +32,27 @@ interface SidebarProps {
 interface SidebarBodyProps {
   collapsed: boolean;
   pathname: string;
+  accountName: string;
+  onOpenSettings: () => void;
+  onSignOut: () => void;
   onNavigate?: () => void;
 }
 
-function SidebarBody({ collapsed, pathname, onNavigate }: SidebarBodyProps) {
+function SidebarBody({
+  collapsed,
+  pathname,
+  accountName,
+  onOpenSettings,
+  onSignOut,
+  onNavigate,
+}: SidebarBodyProps) {
+  const accountInitials = useMemo(() => {
+    const parts = accountName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "C";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  }, [accountName]);
+
   return (
     <div
       className={cn(
@@ -104,17 +124,53 @@ function SidebarBody({ collapsed, pathname, onNavigate }: SidebarBodyProps) {
 
       <div
         className={cn(
-          "mt-auto rounded-xl border border-[var(--border)] bg-[rgba(20,12,34,0.85)] p-3",
-          collapsed && "hidden",
+          "mt-auto rounded-xl border border-[var(--border)] bg-[rgba(20,12,34,0.85)]",
+          collapsed ? "p-2" : "p-3",
         )}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Dica rapida
-        </p>
-        <p className="mt-1 text-xs text-[#c7b8e4]">
-          Use a busca e os filtros para acelerar a selecao de cards antes de
-          arrastar para o calendario.
-        </p>
+        <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#5d3c83] bg-[rgba(37,22,60,0.95)] text-xs font-bold text-[#f5dfff]">
+            {collapsed ? <UserRound className="h-4 w-4" /> : accountInitials}
+          </div>
+
+          <div className={cn("min-w-0 flex-1", collapsed && "hidden")}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+              Conta
+            </p>
+            <p className="truncate text-sm font-semibold text-[var(--foreground)]" title={accountName}>
+              {accountName}
+            </p>
+          </div>
+        </div>
+
+        <div className={cn("mt-3 flex gap-2", collapsed && "mt-2 flex-col")}>
+          <Button
+            className={cn("flex-1", collapsed && "w-full")}
+            onClick={() => {
+              onNavigate?.();
+              onOpenSettings();
+            }}
+            size={collapsed ? "icon" : "sm"}
+            title="Configuracoes da conta"
+            variant="outline"
+          >
+            <Settings className="h-4 w-4" />
+            <span className={cn(collapsed && "hidden")}>Configuracoes</span>
+          </Button>
+          <Button
+            className={cn("flex-1", collapsed && "w-full")}
+            onClick={() => {
+              onNavigate?.();
+              onSignOut();
+            }}
+            size={collapsed ? "icon" : "sm"}
+            title="Sair da conta"
+            variant="outline"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className={cn(collapsed && "hidden")}>Sair</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -126,6 +182,28 @@ export function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [accountName, setAccountName] = useState("Conta");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSessionName() {
+      const session = await getSession();
+      const nextName =
+        session?.user?.name?.trim() ||
+        session?.user?.email?.trim() ||
+        "Conta";
+
+      if (active) setAccountName(nextName);
+    }
+
+    void loadSessionName();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <>
@@ -146,7 +224,14 @@ export function Sidebar({
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <SidebarBody collapsed={false} onNavigate={onCloseMobile} pathname={pathname} />
+        <SidebarBody
+          accountName={accountName}
+          collapsed={false}
+          onNavigate={onCloseMobile}
+          onOpenSettings={() => router.push("/settings")}
+          onSignOut={() => signOut({ callbackUrl: "/login" })}
+          pathname={pathname}
+        />
       </aside>
 
       <aside
@@ -156,7 +241,13 @@ export function Sidebar({
           collapsed ? "md:w-24 md:px-2" : "md:w-80 md:px-5",
         )}
       >
-        <SidebarBody collapsed={collapsed} pathname={pathname} />
+        <SidebarBody
+          accountName={accountName}
+          collapsed={collapsed}
+          onOpenSettings={() => router.push("/settings")}
+          onSignOut={() => signOut({ callbackUrl: "/login" })}
+          pathname={pathname}
+        />
       </aside>
     </>
   );

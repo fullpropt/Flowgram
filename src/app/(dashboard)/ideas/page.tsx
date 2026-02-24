@@ -3,6 +3,7 @@
 import { type ComponentType, useMemo, useState } from "react";
 import { FileText, Funnel, Search } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
+import { BoardColumns } from "@/components/organize/board-columns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FORMATOS, PILARES, STATUSES } from "@/lib/constants";
@@ -41,6 +42,15 @@ export default function IdeasPage() {
   const agendados = useMemo(
     () => cards.filter((card) => card.status === "Agendado").length,
     [cards],
+  );
+
+  const groupedCards = useMemo(
+    () => filteredCards.filter((card) => Boolean(card.pilar)),
+    [filteredCards],
+  );
+  const cardsWithoutPilar = useMemo(
+    () => filteredCards.filter((card) => !card.pilar),
+    [filteredCards],
   );
 
   return (
@@ -108,17 +118,36 @@ export default function IdeasPage() {
         <div className="panel p-5 text-sm text-[var(--muted)]">Carregando cards...</div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredCards.map((card) => (
-          <CardItem
-            card={card}
-            key={card.id}
-            onClick={() => openCardModal(card.id)}
-            onDelete={() => deleteCard(card.id)}
-            onDuplicate={() => duplicateCard(card.id)}
-          />
-        ))}
-      </section>
+      {hydrated ? (
+        groupedCards.length > 0 ? (
+          <BoardColumns cards={groupedCards} onOpenCard={(cardId) => openCardModal(cardId)} />
+        ) : null
+      ) : null}
+
+      {hydrated && cardsWithoutPilar.length > 0 ? (
+        <section className="panel-soft p-4">
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+              Sem pilar
+            </p>
+            <p className="text-sm text-[var(--muted)]">
+              Cards sem grupo definido aparecem aqui.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {cardsWithoutPilar.map((card) => (
+              <CardItem
+                card={card}
+                key={card.id}
+                onClick={() => openCardModal(card.id)}
+                onDelete={() => deleteCard(card.id)}
+                onDuplicate={() => duplicateCard(card.id)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {hydrated && filteredCards.length === 0 ? (
         <section className="panel-soft p-10 text-center text-sm text-[var(--muted)]">
