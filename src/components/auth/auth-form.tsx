@@ -53,6 +53,20 @@ export function AuthForm() {
         return;
       }
 
+      const sessionResponse = await fetch("/api/auth/session", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const sessionBody = (await sessionResponse.json()) as {
+        user?: { id?: string };
+      };
+      if (!sessionBody?.user?.id) {
+        setErro(
+          "Login efetuado, mas a sessao nao foi persistida. Revise NEXTAUTH_URL/NEXTAUTH_SECRET e cookies do navegador.",
+        );
+        return;
+      }
+
       router.push("/ideas");
       router.refresh();
     } catch {
