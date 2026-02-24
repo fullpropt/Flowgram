@@ -6,9 +6,9 @@ import { CardItem } from "@/components/cards/card-item";
 import { BoardColumns } from "@/components/organize/board-columns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FORMATOS, PILARES, STATUSES } from "@/lib/constants";
+import { FORMATOS, STATUSES } from "@/lib/constants";
 import { useAppStore } from "@/store/app-store";
-import { Formato, IdeaStatus, Pilar } from "@/types/models";
+import { Formato, IdeaStatus } from "@/types/models";
 
 export default function IdeasPage() {
   const cards = useAppStore((state) => state.cards);
@@ -18,7 +18,6 @@ export default function IdeasPage() {
   const deleteCard = useAppStore((state) => state.deleteCard);
 
   const [search, setSearch] = useState("");
-  const [pilarFilter, setPilarFilter] = useState<Pilar | "">("");
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | "">("");
   const [formatFilter, setFormatFilter] = useState<Formato | "">("");
 
@@ -31,13 +30,12 @@ export default function IdeasPage() {
         card.descricao?.toLowerCase().includes(term) ||
         card.tags.some((tag) => tag.toLowerCase().includes(term));
 
-      const matchesPilar = !pilarFilter || card.pilar === pilarFilter;
       const matchesStatus = !statusFilter || card.status === statusFilter;
       const matchesFormat = !formatFilter || card.camadas.formato === formatFilter;
 
-      return matchesSearch && matchesPilar && matchesStatus && matchesFormat;
+      return matchesSearch && matchesStatus && matchesFormat;
     });
-  }, [cards, formatFilter, pilarFilter, search, statusFilter]);
+  }, [cards, formatFilter, search, statusFilter]);
 
   const agendados = useMemo(
     () => cards.filter((card) => card.status === "Agendado").length,
@@ -76,17 +74,11 @@ export default function IdeasPage() {
       </section>
 
       <section className="panel-soft p-4">
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.7fr_1fr_1fr_1fr_auto]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.9fr_1fr_1fr_auto]">
           <Input
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por titulo, descricao ou tags"
             value={search}
-          />
-          <FilterSelect
-            onChange={(value) => setPilarFilter(value as Pilar | "")}
-            options={PILARES}
-            placeholder="Pilar"
-            value={pilarFilter}
           />
           <FilterSelect
             onChange={(value) => setStatusFilter(value as IdeaStatus | "")}
@@ -103,7 +95,6 @@ export default function IdeasPage() {
           <Button
             onClick={() => {
               setSearch("");
-              setPilarFilter("");
               setStatusFilter("");
               setFormatFilter("");
             }}

@@ -32,7 +32,13 @@ export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
   const duplicateCard = useAppStore((state) => state.duplicateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
 
   const groupedCards = useMemo(() => {
     const groups: Record<Pilar, IdeaCard[]> = {

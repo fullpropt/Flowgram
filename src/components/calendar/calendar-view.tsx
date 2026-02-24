@@ -28,6 +28,7 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
+  allDay?: boolean;
   resource: CalendarPost;
 }
 
@@ -52,6 +53,18 @@ function singleDayEventEnd(startIso: string) {
   return addMinutes(new Date(startIso), 30);
 }
 
+function normalizePostDate(start: Date, view: View) {
+  const next = new Date(start);
+
+  // In month view, dropping/selecting can produce all-day ranges.
+  // Force a fixed daytime time so the event always stays in a single day.
+  if (view === "month") {
+    next.setHours(9, 0, 0, 0);
+  }
+
+  return next;
+}
+
 export function CalendarView() {
   const cards = useAppStore((state) => state.cards);
   const calendarPosts = useAppStore((state) => state.calendarPosts);
@@ -74,6 +87,7 @@ export function CalendarView() {
         title: `${post.titulo} (${post.canal})`,
         start: new Date(post.dataInicio),
         end: singleDayEventEnd(post.dataInicio),
+        allDay: false,
         resource: post,
       })),
     [calendarPosts],
@@ -97,20 +111,22 @@ export function CalendarView() {
     const titulo = window.prompt("Titulo do post:");
     if (!titulo) return;
     const canalInput = window.prompt("Canal (Feed/Reels/Story)", "Feed");
+    const normalizedStart = normalizePostDate(new Date(slot.start), currentView);
     addCalendarPost({
       titulo,
-      dataInicio: slot.start.toISOString(),
+      dataInicio: normalizedStart.toISOString(),
       canal: canalFromPrompt(canalInput),
     });
   }
 
   function handleDropFromOutside({ start }: DragFromOutsideItemArgs) {
     if (!draggedCard) return;
+    const normalizedStart = normalizePostDate(new Date(start), currentView);
 
     addCalendarPost({
       ideaCardId: draggedCard.id,
       titulo: draggedCard.titulo,
-      dataInicio: new Date(start).toISOString(),
+      dataInicio: normalizedStart.toISOString(),
       canal:
         draggedCard.camadas.formato === "Reels"
           ? "Reels"
@@ -122,20 +138,21 @@ export function CalendarView() {
   }
 
   function handleMoveEvent({ event, start }: EventInteractionArgs<CalendarEvent>) {
+    const normalizedStart = normalizePostDate(new Date(start), currentView);
     updateCalendarPost(event.id, {
-      dataInicio: new Date(start).toISOString(),
+      dataInicio: normalizedStart.toISOString(),
     });
   }
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-      <section className="panel h-fit p-4">
+      <section className="panel flex h-[360px] min-h-0 flex-col p-4 xl:h-[760px]">
         <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards nao agendados</h2>
         <p className="mb-4 text-xs leading-relaxed text-[var(--muted)]">
           Arraste um card para uma data no calendario.
         </p>
 
-        <div className="space-y-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
           {unscheduledCards.map((card) => (
             <CardItem
               card={card}
@@ -158,12 +175,14 @@ export function CalendarView() {
       <section className="min-h-[760px] min-w-0">
         <DndProvider backend={HTML5Backend}>
           <DragAndDropCalendar
+            allDayAccessor={() => false}
             culture="pt-BR"
             dragFromOutsideItem={() => ({
               id: draggedCard?.id ?? "outside-placeholder",
               title: draggedCard?.titulo ?? "Novo post",
               start: new Date(),
-              end: new Date(),
+              end: addMinutes(new Date(), 30),
+              allDay: false,
               resource: {} as CalendarPost,
             })}
             endAccessor="end"
@@ -192,6 +211,7 @@ export function CalendarView() {
             onSelectSlot={handleCreateFromSlot}
             onView={setCurrentView}
             popup
+            resizable={false}
             selectable
             startAccessor="start"
             style={{ height: 760 }}
