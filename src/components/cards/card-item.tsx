@@ -17,6 +17,7 @@ interface CardItemProps {
   defaultExpanded?: boolean;
   draggable?: boolean;
   onClick?: () => void;
+  onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
   onDragStart?: () => void;
@@ -38,6 +39,7 @@ export function CardItem({
   defaultExpanded = false,
   draggable = false,
   onClick,
+  onEdit,
   onDuplicate,
   onDelete,
   onDragStart,
@@ -65,19 +67,9 @@ export function CardItem({
         )}
       />
 
-      <div className="mb-3 mt-1 flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="mt-1 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h3 className="line-clamp-2 text-sm font-bold text-[var(--foreground)]">{card.titulo}</h3>
-          {card.descricao && !compact && showExpandedDetails ? (
-            <p
-              className={cn(
-                "mt-1 text-xs leading-relaxed text-[var(--muted)]",
-                canCollapse ? "line-clamp-4" : "line-clamp-2",
-              )}
-            >
-              {card.descricao}
-            </p>
-          ) : null}
         </div>
         <div className="flex items-center gap-1" onClick={(event) => event.stopPropagation()}>
           {canCollapse ? (
@@ -94,6 +86,12 @@ export function CardItem({
             </Button>
           ) : null}
 
+          {onEdit ? (
+            <Button onClick={onEdit} size="icon" title="Editar" variant="ghost">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+
           {showActions ? (
             <div className="flex items-center gap-1 opacity-80 transition group-hover:opacity-100">
               <Button onClick={onDuplicate} size="icon" title="Duplicar" variant="ghost">
@@ -102,14 +100,27 @@ export function CardItem({
               <Button onClick={onDelete} size="icon" title="Excluir" variant="ghost">
                 <Trash2 className="h-3.5 w-3.5 text-red-500" />
               </Button>
-            </div>
-          ) : (
-            <Pencil className="mt-0.5 h-4 w-4 text-[#8063aa]" />
-          )}
+              </div>
+          ) : null}
         </div>
       </div>
 
-      <div className={cn("flex flex-wrap gap-2", showExpandedDetails && "mb-3")}>
+      {!compact ? (
+        card.descricao && showExpandedDetails ? (
+          <p
+            className={cn(
+              "mb-3 mt-2 text-xs leading-relaxed text-[var(--muted)]",
+              !canCollapse && "line-clamp-2",
+            )}
+          >
+            {card.descricao}
+          </p>
+        ) : (
+          <div className="mb-3" />
+        )
+      ) : null}
+
+      <div className={cn("flex flex-wrap gap-2", showExpandedDetails && "mb-3", !showExpandedDetails && "mb-0")}>
         <Badge className="border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]">
           {statusLabel[card.status]}
         </Badge>

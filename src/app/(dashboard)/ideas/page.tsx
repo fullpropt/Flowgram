@@ -3,6 +3,7 @@
 import { type ComponentType, useMemo, useState } from "react";
 import { FileText, Funnel, Search } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
+import { CardPreviewModal } from "@/components/cards/card-preview-modal";
 import { BoardColumns } from "@/components/organize/board-columns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ export default function IdeasPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | "">("");
   const [formatFilter, setFormatFilter] = useState<Formato | "">("");
+  const [previewCardId, setPreviewCardId] = useState<string | null>(null);
 
   const filteredCards = useMemo(() => {
     const term = search.toLowerCase().trim();
@@ -50,6 +52,15 @@ export default function IdeasPage() {
     () => filteredCards.filter((card) => !card.pilar),
     [filteredCards],
   );
+  const previewCard = useMemo(
+    () => cards.find((card) => card.id === previewCardId) ?? null,
+    [cards, previewCardId],
+  );
+
+  function handleDeleteCard(cardId: string) {
+    if (previewCardId === cardId) setPreviewCardId(null);
+    deleteCard(cardId);
+  }
 
   return (
     <div className="space-y-4">
@@ -83,13 +94,13 @@ export default function IdeasPage() {
           <FilterSelect
             onChange={(value) => setStatusFilter(value as IdeaStatus | "")}
             options={STATUSES}
-            placeholder="Status"
+            label="Status"
             value={statusFilter}
           />
           <FilterSelect
             onChange={(value) => setFormatFilter(value as Formato | "")}
             options={FORMATOS}
-            placeholder="Formato"
+            label="Formato"
             value={formatFilter}
           />
           <Button
@@ -111,7 +122,11 @@ export default function IdeasPage() {
 
       {hydrated ? (
         groupedCards.length > 0 ? (
-          <BoardColumns cards={groupedCards} onOpenCard={(cardId) => openCardModal(cardId)} />
+          <BoardColumns
+            cards={groupedCards}
+            onEditCard={(cardId) => openCardModal(cardId)}
+            onOpenCard={(cardId) => setPreviewCardId(cardId)}
+          />
         ) : null
       ) : null}
 
@@ -131,9 +146,10 @@ export default function IdeasPage() {
               <CardItem
                 card={card}
                 key={card.id}
-                onClick={() => openCardModal(card.id)}
-                onDelete={() => deleteCard(card.id)}
+                onClick={() => setPreviewCardId(card.id)}
+                onDelete={() => handleDeleteCard(card.id)}
                 onDuplicate={() => duplicateCard(card.id)}
+                onEdit={() => openCardModal(card.id)}
               />
             ))}
           </div>
@@ -145,6 +161,15 @@ export default function IdeasPage() {
           Nenhum card encontrado com os filtros atuais.
         </section>
       ) : null}
+
+      <CardPreviewModal
+        card={previewCard}
+        onEdit={previewCard ? () => openCardModal(previewCard.id) : undefined}
+        onOpenChange={(open) => {
+          if (!open) setPreviewCardId(null);
+        }}
+        open={Boolean(previewCard)}
+      />
     </div>
   );
 }
@@ -153,26 +178,32 @@ function FilterSelect({
   value,
   onChange,
   options,
-  placeholder,
+  label,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: string[];
-  placeholder: string;
+  label: string;
 }) {
   return (
-    <select
-      className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-      onChange={(event) => onChange(event.target.value)}
-      value={value}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {option}
-        </option>
-      ))}
-    </select>
+    <label className="grid gap-1">
+      <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+        {label}
+      </span>
+      <select
+        aria-label={label}
+        className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        <option value="">Todos</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

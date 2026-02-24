@@ -25,9 +25,10 @@ import { IdeaCard, Pilar } from "@/types/models";
 interface BoardColumnsProps {
   cards: IdeaCard[];
   onOpenCard: (cardId: string) => void;
+  onEditCard?: (cardId: string) => void;
 }
 
-export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
+export function BoardColumns({ cards, onOpenCard, onEditCard }: BoardColumnsProps) {
   const moveCardPillar = useAppStore((state) => state.moveCardPillar);
   const duplicateCard = useAppStore((state) => state.duplicateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
@@ -92,6 +93,7 @@ export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
                     key={card.id}
                     onDelete={() => deleteCard(card.id)}
                     onDuplicate={() => duplicateCard(card.id)}
+                    onEdit={onEditCard ? () => onEditCard(card.id) : undefined}
                     onOpen={() => onOpenCard(card.id)}
                   />
                 ))}
@@ -140,11 +142,13 @@ function BoardColumn({
 function SortableCard({
   card,
   onOpen,
+  onEdit,
   onDuplicate,
   onDelete,
 }: {
   card: IdeaCard;
   onOpen: () => void;
+  onEdit?: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
@@ -168,7 +172,13 @@ function SortableCard({
       {...listeners}
       className={cn(isDragging && "opacity-60")}
     >
-      <CardItem card={card} onClick={onOpen} onDelete={onDelete} onDuplicate={onDuplicate} />
+      <CardItem
+        card={card}
+        onClick={onOpen}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+        onEdit={onEdit}
+      />
     </div>
   );
 }

@@ -3,13 +3,7 @@
 import { useMemo, useState } from "react";
 import { addMinutes, format, getDay, parse, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Calendar,
-  dateFnsLocalizer,
-  type EventProps,
-  type SlotInfo,
-  type View,
-} from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, type EventProps, type View } from "react-big-calendar";
 import withDragAndDrop, {
   type DragFromOutsideItemArgs,
   type EventInteractionArgs,
@@ -29,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PILARES } from "@/lib/constants";
 import { useAppStore } from "@/store/app-store";
-import { CalendarPost, Canal, Pilar } from "@/types/models";
+import { CalendarPost, Pilar } from "@/types/models";
 
 interface CalendarEvent {
   id: string;
@@ -50,12 +44,6 @@ const localizer = dateFnsLocalizer({
 });
 
 const DragAndDropCalendar = withDragAndDrop<CalendarEvent, object>(Calendar);
-
-function canalFromPrompt(value: string | null): Canal {
-  if (value === "Reels") return "Reels";
-  if (value === "Story") return "Story";
-  return "Feed";
-}
 
 function singleDayEventEnd(startIso: string) {
   return addMinutes(new Date(startIso), 30);
@@ -157,18 +145,6 @@ export function CalendarView() {
     [calendarPosts],
   );
 
-  function handleCreateFromSlot(slot: SlotInfo) {
-    const titulo = window.prompt("Titulo do post:");
-    if (!titulo) return;
-    const canalInput = window.prompt("Canal (Feed/Reels/Story)", "Feed");
-    const normalizedStart = normalizePostDate(new Date(slot.start), currentView);
-    addCalendarPost({
-      titulo,
-      dataInicio: normalizedStart.toISOString(),
-      canal: canalFromPrompt(canalInput),
-    });
-  }
-
   function handleDropFromOutside({ start }: DragFromOutsideItemArgs) {
     if (!draggedCard) return;
     const normalizedStart = normalizePostDate(new Date(start), currentView);
@@ -197,23 +173,29 @@ export function CalendarView() {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
       <section className="panel flex h-[360px] min-h-0 flex-col p-4 xl:h-[760px]">
-        <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards disponiveis</h2>
+        <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards disponíveis</h2>
         <p className="mb-4 text-xs leading-relaxed text-[var(--muted)]">
           Arraste um card para uma data no calendario.
         </p>
 
-        <select
-          className="mb-3 h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-          onChange={(event) => setAvailablePilarFilter(event.target.value as Pilar | "")}
-          value={availablePilarFilter}
-        >
-          <option value="">Todos os pilares</option>
-          {PILARES.map((pilar) => (
-            <option key={pilar} value={pilar}>
-              {pilar}
-            </option>
-          ))}
-        </select>
+        <label className="mb-3 grid gap-1">
+          <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+            Pilar
+          </span>
+          <select
+            aria-label="Pilar"
+            className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
+            onChange={(event) => setAvailablePilarFilter(event.target.value as Pilar | "")}
+            value={availablePilarFilter}
+          >
+            <option value="">Todos</option>
+            {PILARES.map((pilar) => (
+              <option key={pilar} value={pilar}>
+                {pilar}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
           {unscheduledCards.map((card) => (
@@ -229,7 +211,7 @@ export function CalendarView() {
           ))}
           {unscheduledCards.length === 0 ? (
             <p className="rounded-xl border border-[var(--border)] bg-[rgba(20,12,34,0.85)] px-3 py-4 text-sm text-[var(--muted)]">
-              Nenhum card disponivel com o filtro atual.
+              Nenhum card disponível com o filtro atual.
             </p>
           ) : null}
         </div>
@@ -290,7 +272,6 @@ export function CalendarView() {
               setSelectedPostId(event.id);
               setNotesDraft(event.resource.observacoes ?? "");
             }}
-            onSelectSlot={handleCreateFromSlot}
             onView={setCurrentView}
             popup
             resizable={false}
