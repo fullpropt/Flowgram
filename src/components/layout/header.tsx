@@ -10,11 +10,11 @@ import { useAppStore } from "@/store/app-store";
 const routeCopy: Record<string, { title: string; subtitle: string }> = {
   ideas: {
     title: "Banco de Ideias",
-    subtitle: "Gerencie, filtre e organize ideias em um unico lugar.",
+    subtitle: "",
   },
   organize: {
     title: "Organizar",
-    subtitle: "Distribua os cards entre pilares e monte sua semana.",
+    subtitle: "Distribua os cards entre grupos e monte sua semana.",
   },
   calendar: {
     title: "Calendario",
@@ -26,7 +26,7 @@ const routeCopy: Record<string, { title: string; subtitle: string }> = {
   },
   settings: {
     title: "Configuracoes",
-    subtitle: "Gerencie dados da conta e preferencias do workspace.",
+    subtitle: "Defina grupos, objetivos e tags para organizar seus cards.",
   },
 };
 
@@ -83,7 +83,9 @@ export function Header({
               Flowgram Lab
             </p>
             <h1 className="text-lg font-bold text-[var(--foreground)]">{routeData.title}</h1>
-            <p className="hidden text-sm text-[var(--muted)] md:block">{routeData.subtitle}</p>
+            {routeData.subtitle ? (
+              <p className="hidden text-sm text-[var(--muted)] md:block">{routeData.subtitle}</p>
+            ) : null}
           </div>
         </div>
 

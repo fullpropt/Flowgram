@@ -5,7 +5,7 @@ import { ChevronDown, Copy, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormatoSymbol } from "@/components/ui/formato-symbol";
-import { objetivoLabel, statusLabel } from "@/lib/constants";
+import { getGroupTone, getObjetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { IdeaCard } from "@/types/models";
 
@@ -23,13 +23,6 @@ interface CardItemProps {
   onDelete?: () => void;
   onDragStart?: () => void;
 }
-
-const pilarTone: Partial<Record<NonNullable<IdeaCard["pilar"]>, string>> = {
-  Dor: "from-[#ff6b8f] to-[#ff925a]",
-  Educacao: "from-[#59c9ff] to-[#52f1ff]",
-  Solucao: "from-[#9dff87] to-[#56f0ad]",
-  Construcao: "from-[#f857b2] to-[#a83cff]",
-};
 
 export function CardItem({
   card,
@@ -64,7 +57,7 @@ export function CardItem({
       <div
         className={cn(
           "absolute left-0 top-0 h-1 w-full bg-gradient-to-r",
-          card.pilar ? pilarTone[card.pilar] : "from-[#5b477f] to-[#392953]",
+          getGroupTone(card.pilar),
         )}
       />
 
@@ -149,7 +142,7 @@ export function CardItem({
         {card.camadas.objetivo ? (
           <p>
             <span className="font-semibold text-[#f3e9ff]">Objetivo:</span>{" "}
-            {objetivoLabel[card.camadas.objetivo]}
+            {getObjetivoLabel(card.camadas.objetivo)}
           </p>
         ) : null}
       </div>

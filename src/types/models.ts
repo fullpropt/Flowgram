@@ -1,4 +1,4 @@
-export type Pilar = "Dor" | "Educacao" | "Solucao" | "Construcao";
+export type Pilar = string;
 
 export type Formato =
   | "Carrossel"
@@ -7,12 +7,7 @@ export type Formato =
   | "Imagem unica"
   | "Story";
 
-export type Objetivo =
-  | "Engajamento"
-  | "Autoridade"
-  | "Lista de espera"
-  | "Hype"
-  | "Conversao";
+export type Objetivo = string;
 
 export type IdeaStatus =
   | "Ideia"
@@ -58,6 +53,12 @@ export interface TrashedIdeaCard {
   relatedCalendarPosts: CalendarPost[];
   deletedAt: string;
   expiresAt: string;
+}
+
+export interface WorkspaceTaxonomyConfig {
+  grupos: string[];
+  objetivos: string[];
+  tags: string[];
 }
 
 export interface IdeaCardInput {

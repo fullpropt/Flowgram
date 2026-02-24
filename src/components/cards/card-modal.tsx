@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,9 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FORMATOS, OBJETIVOS, PILARES, STATUSES } from "@/lib/constants";
+import { FORMATOS, STATUSES } from "@/lib/constants";
 import { useAppStore } from "@/store/app-store";
-import { Formato, IdeaCardInput, IdeaStatus, Objetivo, Pilar } from "@/types/models";
+import { Formato, IdeaCardInput, IdeaStatus } from "@/types/models";
 
 const emptyCard: IdeaCardInput = {
   titulo: "",
@@ -28,6 +30,7 @@ export function CardModal() {
   const isOpen = useAppStore((state) => state.isCardModalOpen);
   const activeCardId = useAppStore((state) => state.activeCardId);
   const cards = useAppStore((state) => state.cards);
+  const taxonomyConfig = useAppStore((state) => state.taxonomyConfig);
   const addCard = useAppStore((state) => state.addCard);
   const updateCard = useAppStore((state) => state.updateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
@@ -39,7 +42,7 @@ export function CardModal() {
   );
 
   const [form, setForm] = useState<IdeaCardInput>(emptyCard);
-  const [tagText, setTagText] = useState("");
+  const [selectedTagToAdd, setSelectedTagToAdd] = useState("");
 
   useEffect(() => {
     if (activeCard) {
@@ -52,23 +55,27 @@ export function CardModal() {
         status: activeCard.status,
         tags: activeCard.tags,
       });
-      setTagText(activeCard.tags.join(", "));
+      setSelectedTagToAdd("");
       return;
     }
 
     setForm(emptyCard);
-    setTagText("");
+    setSelectedTagToAdd("");
   }, [activeCard, isOpen]);
+
+  const groupOptions = mergeUniqueStrings(taxonomyConfig.grupos, form.pilar ? [form.pilar] : []);
+  const objectiveOptions = mergeUniqueStrings(
+    taxonomyConfig.objetivos,
+    form.camadas?.objetivo ? [form.camadas.objetivo] : [],
+  );
+  const tagOptions = mergeUniqueStrings(taxonomyConfig.tags, form.tags ?? []);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const payload: IdeaCardInput = {
       ...form,
       titulo: form.titulo.trim(),
-      tags: tagText
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
+      tags: (form.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
     };
     if (!payload.titulo) return;
 
@@ -126,15 +133,15 @@ export function CardModal() {
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <SelectField
-              label="Pilar"
+              label="Grupo"
               onChange={(value) =>
                 setForm((prev) => ({
                   ...prev,
-                  pilar: value ? (value as Pilar) : undefined,
+                  pilar: value || undefined,
                 }))
               }
-              options={PILARES}
-              placeholder="Selecionar pilar"
+              options={groupOptions}
+              placeholder="Selecionar grupo"
               value={form.pilar}
             />
             <SelectField
@@ -182,18 +189,18 @@ export function CardModal() {
                 placeholder="Selecionar formato"
                 value={form.camadas?.formato}
               />
-              <SelectField
+                <SelectField
                 label="Objetivo"
                 onChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
                     camadas: {
                       ...prev.camadas,
-                      objetivo: value ? (value as Objetivo) : undefined,
+                      objetivo: value || undefined,
                     },
                   }))
                 }
-                options={OBJETIVOS}
+                options={objectiveOptions}
                 placeholder="Selecionar objetivo"
                 value={form.camadas?.objetivo}
               />
@@ -227,13 +234,66 @@ export function CardModal() {
 
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-              Tags (separadas por virgula)
+              Tags
             </label>
-            <Input
-              onChange={(event) => setTagText(event.target.value)}
-              placeholder="instagram, vendas, reels"
-              value={tagText}
-            />
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <select
+                className="flex h-10 w-full rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
+                onChange={(event) => setSelectedTagToAdd(event.target.value)}
+                value={selectedTagToAdd}
+              >
+                <option value="">
+                  {tagOptions.length > 0 ? "Selecionar tag" : "Cadastre tags em Configuracoes"}
+                </option>
+                {tagOptions.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+              <Button
+                disabled={!selectedTagToAdd}
+                onClick={() => {
+                  if (!selectedTagToAdd) return;
+                  setForm((prev) => ({
+                    ...prev,
+                    tags: mergeUniqueStrings(prev.tags ?? [], [selectedTagToAdd]),
+                  }));
+                  setSelectedTagToAdd("");
+                }}
+                type="button"
+                variant="outline"
+              >
+                Adicionar tag
+              </Button>
+            </div>
+
+            {(form.tags ?? []).length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {(form.tags ?? []).map((tag) => (
+                  <Badge className="gap-1 pr-1" key={tag}>
+                    <span>{tag}</span>
+                    <button
+                      className="inline-flex h-4 w-4 items-center justify-center rounded transition hover:bg-[rgba(255,255,255,0.12)]"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          tags: (prev.tags ?? []).filter((currentTag) => currentTag !== tag),
+                        }))
+                      }
+                      title={`Remover tag ${tag}`}
+                      type="button"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--muted)]">
+                Nenhuma tag selecionada.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] pt-4">
@@ -264,6 +324,22 @@ export function CardModal() {
       </DialogContent>
     </Dialog>
   );
+}
+
+function mergeUniqueStrings(primary: string[], extra: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  [...primary, ...extra].forEach((value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(trimmed);
+  });
+
+  return result;
 }
 
 interface SelectFieldProps {

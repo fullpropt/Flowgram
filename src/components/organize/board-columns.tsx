@@ -17,10 +17,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CardItem } from "@/components/cards/card-item";
-import { PILARES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
-import { IdeaCard, Pilar } from "@/types/models";
+import { IdeaCard } from "@/types/models";
 
 interface BoardColumnsProps {
   cards: IdeaCard[];
@@ -32,6 +31,7 @@ export function BoardColumns({ cards, onOpenCard, onEditCard }: BoardColumnsProp
   const moveCardPillar = useAppStore((state) => state.moveCardPillar);
   const duplicateCard = useAppStore((state) => state.duplicateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
+  const configuredGroups = useAppStore((state) => state.taxonomyConfig.grupos);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -41,32 +41,47 @@ export function BoardColumns({ cards, onOpenCard, onEditCard }: BoardColumnsProp
     }),
   );
 
+  const groupOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const values: string[] = [];
+
+    [...configuredGroups, ...cards.map((card) => card.pilar).filter(Boolean) as string[]].forEach(
+      (group) => {
+        const next = group.trim();
+        if (!next) return;
+        const key = next.toLocaleLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        values.push(next);
+      },
+    );
+
+    return values;
+  }, [cards, configuredGroups]);
+
   const groupedCards = useMemo(() => {
-    const groups: Record<Pilar, IdeaCard[]> = {
-      Dor: [],
-      Educacao: [],
-      Solucao: [],
-      Construcao: [],
-    };
+    const groups = new Map<string, IdeaCard[]>();
+    groupOrder.forEach((group) => groups.set(group, []));
 
     cards.forEach((card) => {
       if (!card.pilar) return;
-      groups[card.pilar].push(card);
+      if (!groups.has(card.pilar)) groups.set(card.pilar, []);
+      groups.get(card.pilar)!.push(card);
     });
 
     return groups;
-  }, [cards]);
+  }, [cards, groupOrder]);
 
   function handleDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id);
     const over = event.over;
     if (!over) return;
 
-    const overData = over.data.current as { type?: string; pilar?: Pilar } | undefined;
-    const targetPilar = overData?.pilar;
-    if (!targetPilar) return;
+    const overData = over.data.current as { type?: string; group?: string } | undefined;
+    const targetGroup = overData?.group;
+    if (!targetGroup) return;
 
-    moveCardPillar(activeId, targetPilar);
+    moveCardPillar(activeId, targetGroup);
   }
 
   return (
@@ -75,19 +90,19 @@ export function BoardColumns({ cards, onOpenCard, onEditCard }: BoardColumnsProp
       onDragEnd={handleDragEnd}
       sensors={sensors}
     >
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        {PILARES.map((pilar) => (
+      <div className={cn("grid grid-cols-1 gap-4", groupOrder.length > 0 && "xl:grid-cols-4")}>
+        {groupOrder.map((group) => (
           <BoardColumn
-            cardCount={groupedCards[pilar].length}
-            key={pilar}
-            pilar={pilar}
+            cardCount={groupedCards.get(group)?.length ?? 0}
+            group={group}
+            key={group}
           >
             <SortableContext
-              items={groupedCards[pilar].map((card) => card.id)}
+              items={(groupedCards.get(group) ?? []).map((card) => card.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-3">
-                {groupedCards[pilar].map((card) => (
+                {(groupedCards.get(group) ?? []).map((card) => (
                   <SortableCard
                     card={card}
                     key={card.id}
@@ -107,17 +122,17 @@ export function BoardColumns({ cards, onOpenCard, onEditCard }: BoardColumnsProp
 }
 
 function BoardColumn({
-  pilar,
+  group,
   cardCount,
   children,
 }: {
-  pilar: Pilar;
+  group: string;
   cardCount: number;
   children: React.ReactNode;
 }) {
   const { isOver, setNodeRef } = useDroppable({
-    id: `column-${pilar}`,
-    data: { type: "column", pilar },
+    id: `column-${group}`,
+    data: { type: "column", group },
   });
 
   return (
@@ -129,7 +144,7 @@ function BoardColumn({
       ref={setNodeRef}
     >
       <header className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2">
-        <h3 className="text-sm font-bold text-[var(--foreground)]">{pilar}</h3>
+        <h3 className="text-sm font-bold text-[var(--foreground)]">{group}</h3>
         <span className="rounded-full border border-[#5e3b83] bg-[rgba(22,14,39,0.85)] px-2 py-0.5 text-[11px] font-semibold text-[#d9c6f8]">
           {cardCount}
         </span>
@@ -157,7 +172,7 @@ function SortableCard({
       id: card.id,
       data: {
         type: "card",
-        pilar: card.pilar,
+        group: card.pilar,
       },
     });
 

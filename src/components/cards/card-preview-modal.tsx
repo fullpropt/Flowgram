@@ -12,16 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
+import { getGroupLabel, getGroupTone, getObjetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Canal, IdeaCard } from "@/types/models";
-
-const pilarTone: Partial<Record<NonNullable<IdeaCard["pilar"]>, string>> = {
-  Dor: "from-[#ff6b8f] to-[#ff925a]",
-  Educacao: "from-[#59c9ff] to-[#52f1ff]",
-  Solucao: "from-[#9dff87] to-[#56f0ad]",
-  Construcao: "from-[#f857b2] to-[#a83cff]",
-};
 
 interface CardPreviewModalProps {
   card: IdeaCard | null;
@@ -89,7 +82,7 @@ export function CardPreviewModal({
             <div
               className={cn(
                 "h-1 w-full bg-gradient-to-r",
-                card.pilar ? pilarTone[card.pilar] : "from-[#5b477f] to-[#392953]",
+                getGroupTone(card.pilar),
               )}
             />
 
@@ -108,7 +101,7 @@ export function CardPreviewModal({
                   ) : null}
                   {card.pilar ? (
                     <Badge className="border-[#4c356d] bg-[rgba(31,19,51,0.82)] text-[#e7d7ff]">
-                      Pilar: {pilarLabel[card.pilar]}
+                      Grupo: {getGroupLabel(card.pilar)}
                     </Badge>
                   ) : null}
                 </div>
@@ -171,8 +164,8 @@ export function CardPreviewModal({
 
                 <div className="grid gap-2 text-sm text-[#dccccf]">
                   <RowValue
-                    label="Pilar"
-                    value={card.pilar ? pilarLabel[card.pilar] : "Nao definido"}
+                    label="Grupo"
+                    value={card.pilar ? getGroupLabel(card.pilar) : "Nao definido"}
                   />
                   <RowValue
                     label="Macrotema"
@@ -190,7 +183,7 @@ export function CardPreviewModal({
                   </span>
                 ) : null}
                 {card.camadas.objetivo ? (
-                  <Badge>{objetivoLabel[card.camadas.objetivo]}</Badge>
+                  <Badge>{getObjetivoLabel(card.camadas.objetivo)}</Badge>
                 ) : null}
                 {card.camadas.macroTema ? (
                   <Badge className="max-w-full truncate">{card.camadas.macroTema}</Badge>

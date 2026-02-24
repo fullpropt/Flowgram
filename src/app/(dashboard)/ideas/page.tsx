@@ -135,7 +135,7 @@ export default function IdeasPage() {
         <section className="panel-soft p-4">
           <div className="mb-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-              Sem pilar
+              Sem grupo
             </p>
             <p className="text-sm text-[var(--muted)]">
               Cards sem grupo definido aparecem aqui.

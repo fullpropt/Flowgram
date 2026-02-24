@@ -3,6 +3,7 @@
 import { addDays } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
+import { DEFAULT_WORKSPACE_TAXONOMY } from "@/lib/constants";
 import { loadAppState, saveAppState } from "@/services/state-api.repository";
 import {
   CalendarPost,
@@ -13,16 +14,22 @@ import {
   IdeaStatus,
   Pilar,
   TrashedIdeaCard,
+  WorkspaceTaxonomyConfig,
 } from "@/types/models";
 
 interface AppState {
   cards: IdeaCard[];
   calendarPosts: CalendarPost[];
   trashedCards: TrashedIdeaCard[];
+  taxonomyConfig: WorkspaceTaxonomyConfig;
   hydrated: boolean;
   isCardModalOpen: boolean;
   activeCardId: string | null;
   initializeData: () => Promise<void>;
+  setTaxonomyList: (
+    kind: keyof WorkspaceTaxonomyConfig,
+    values: string[],
+  ) => void;
   openCardModal: (cardId?: string | null) => void;
   closeCardModal: () => void;
   addCard: (input: IdeaCardInput) => IdeaCard;
@@ -50,6 +57,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const TAXONOMY_STORAGE_KEY = "flowgram-lab-taxonomy-v1";
+
 function normalizeCard(input: IdeaCardInput): IdeaCard {
   const now = nowIso();
   return {
@@ -63,6 +72,56 @@ function normalizeCard(input: IdeaCardInput): IdeaCard {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function normalizeTaxonomyList(values: string[]) {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  values.forEach((rawValue) => {
+    const value = rawValue.trim();
+    if (!value) return;
+    const key = value.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push(value);
+  });
+
+  return normalized;
+}
+
+function normalizeTaxonomyConfig(
+  input?: Partial<WorkspaceTaxonomyConfig> | null,
+): WorkspaceTaxonomyConfig {
+  return {
+    grupos: normalizeTaxonomyList(input?.grupos ?? DEFAULT_WORKSPACE_TAXONOMY.grupos),
+    objetivos: normalizeTaxonomyList(input?.objetivos ?? DEFAULT_WORKSPACE_TAXONOMY.objetivos),
+    tags: normalizeTaxonomyList(input?.tags ?? DEFAULT_WORKSPACE_TAXONOMY.tags),
+  };
+}
+
+function loadTaxonomyConfigFromStorage() {
+  if (typeof window === "undefined") return normalizeTaxonomyConfig();
+
+  try {
+    const raw = window.localStorage.getItem(TAXONOMY_STORAGE_KEY);
+    if (!raw) return normalizeTaxonomyConfig();
+    const parsed = JSON.parse(raw) as Partial<WorkspaceTaxonomyConfig>;
+    return normalizeTaxonomyConfig(parsed);
+  } catch (error) {
+    console.error("Falha ao carregar configuracoes locais", error);
+    return normalizeTaxonomyConfig();
+  }
+}
+
+function saveTaxonomyConfigToStorage(config: WorkspaceTaxonomyConfig) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(TAXONOMY_STORAGE_KEY, JSON.stringify(config));
+  } catch (error) {
+    console.error("Falha ao salvar configuracoes locais", error);
+  }
 }
 
 function toCanalFromCard(card: IdeaCard): Canal {
@@ -127,6 +186,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   cards: [],
   calendarPosts: [],
   trashedCards: [],
+  taxonomyConfig: normalizeTaxonomyConfig(),
   hydrated: false,
   isCardModalOpen: false,
   activeCardId: null,
@@ -138,10 +198,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cards = state.cards ?? [];
       const calendarPosts = state.calendarPosts ?? [];
       const trashedCards = pruneExpiredTrash(state.trashedCards ?? []);
+      const taxonomyConfig = loadTaxonomyConfigFromStorage();
       set({
         cards,
         calendarPosts,
         trashedCards,
+        taxonomyConfig,
         hydrated: true,
       });
 
@@ -150,8 +212,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     } catch (error) {
       console.error("Falha ao carregar estado inicial", error);
-      set({ hydrated: true });
+      set({
+        hydrated: true,
+        taxonomyConfig: loadTaxonomyConfigFromStorage(),
+      });
     }
+  },
+  setTaxonomyList: (kind, values) => {
+    set((state) => {
+      const taxonomyConfig = normalizeTaxonomyConfig({
+        ...state.taxonomyConfig,
+        [kind]: values,
+      });
+      saveTaxonomyConfigToStorage(taxonomyConfig);
+      return { taxonomyConfig };
+    });
   },
   openCardModal: (cardId = null) =>
     set({ isCardModalOpen: true, activeCardId: cardId }),

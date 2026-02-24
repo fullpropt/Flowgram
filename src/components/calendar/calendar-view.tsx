@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { addMinutes, format, getDay, parse, startOfWeek } from "date-fns";
@@ -15,9 +15,8 @@ import { CardItem } from "@/components/cards/card-item";
 import { CardPreviewModal } from "@/components/cards/card-preview-modal";
 import { Button } from "@/components/ui/button";
 import { CanalSymbol } from "@/components/ui/canal-symbol";
-import { PILARES } from "@/lib/constants";
 import { useAppStore } from "@/store/app-store";
-import { CalendarPost, Canal, Pilar } from "@/types/models";
+import { CalendarPost, Canal } from "@/types/models";
 
 interface CalendarEvent {
   id: string;
@@ -90,6 +89,7 @@ function CalendarEventContent({
 export function CalendarView() {
   const cards = useAppStore((state) => state.cards);
   const calendarPosts = useAppStore((state) => state.calendarPosts);
+  const configuredGroups = useAppStore((state) => state.taxonomyConfig.grupos);
   const addCalendarPost = useAppStore((state) => state.addCalendarPost);
   const updateCard = useAppStore((state) => state.updateCard);
   const updateCalendarPost = useAppStore((state) => state.updateCalendarPost);
@@ -100,7 +100,7 @@ export function CalendarView() {
   const [currentView, setCurrentView] = useState<View>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
-  const [availablePilarFilter, setAvailablePilarFilter] = useState<Pilar | "">("");
+  const [availablePilarFilter, setAvailablePilarFilter] = useState("");
   const [previewState, setPreviewState] = useState<{
     cardId: string;
     canal?: Canal;
@@ -141,6 +141,24 @@ export function CalendarView() {
     });
   }, [availablePilarFilter, calendarPosts, cards]);
 
+  const availableGroupOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const values: string[] = [];
+
+    [...configuredGroups, ...(cards.map((card) => card.pilar).filter(Boolean) as string[])].forEach(
+      (group) => {
+        const next = group.trim();
+        if (!next) return;
+        const key = next.toLocaleLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        values.push(next);
+      },
+    );
+
+    return values;
+  }, [cards, configuredGroups]);
+
   const calendarRenderKey = useMemo(
     () =>
       calendarPosts
@@ -178,25 +196,25 @@ export function CalendarView() {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
       <section className="panel flex h-[360px] min-h-0 flex-col p-4 xl:h-[760px]">
-        <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards disponíveis</h2>
+        <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">{"Cards dispon\u00EDveis"}</h2>
         <p className="mb-4 text-xs leading-relaxed text-[var(--muted)]">
           Arraste um card para uma data no calendario.
         </p>
 
         <label className="mb-3 grid gap-1">
           <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-            Pilar
+            Grupo
           </span>
           <select
-            aria-label="Pilar"
+            aria-label="Grupo"
             className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-            onChange={(event) => setAvailablePilarFilter(event.target.value as Pilar | "")}
+            onChange={(event) => setAvailablePilarFilter(event.target.value)}
             value={availablePilarFilter}
           >
             <option value="">Todos</option>
-            {PILARES.map((pilar) => (
-              <option key={pilar} value={pilar}>
-                {pilar}
+            {availableGroupOptions.map((group) => (
+              <option key={group} value={group}>
+                {group}
               </option>
             ))}
           </select>
@@ -217,7 +235,7 @@ export function CalendarView() {
           ))}
           {unscheduledCards.length === 0 ? (
             <p className="rounded-xl border border-[var(--border)] bg-[rgba(20,12,34,0.85)] px-3 py-4 text-sm text-[var(--muted)]">
-              Nenhum card disponível com o filtro atual.
+              {"Nenhum card dispon\u00EDvel com o filtro atual."}
             </p>
           ) : null}
         </div>
@@ -341,3 +359,6 @@ export function CalendarView() {
     </div>
   );
 }
+
+
+
