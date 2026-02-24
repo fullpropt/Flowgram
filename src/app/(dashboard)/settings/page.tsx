@@ -139,6 +139,8 @@ function GroupListPanel({
   const [draftColorKey, setDraftColorKey] = useState<GroupColorPresetKey>(() =>
     nextColorKeyForNewGroup(groups, groupColors),
   );
+  const [isAdding, setIsAdding] = useState(false);
+  const [isAddColorMenuOpen, setIsAddColorMenuOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [editingColorKey, setEditingColorKey] = useState<GroupColorPresetKey>(
@@ -157,6 +159,21 @@ function GroupListPanel({
     if (!value) return;
     commit([...groups, value], { ...groupColors, [value]: draftColorKey });
     setDraft("");
+    setIsAdding(false);
+    setIsAddColorMenuOpen(false);
+  }
+
+  function openAddForm() {
+    setDraft("");
+    setDraftColorKey(nextColorKeyForNewGroup(groups, groupColors));
+    setIsAdding(true);
+  }
+
+  function cancelAddForm() {
+    setDraft("");
+    setIsAdding(false);
+    setIsAddColorMenuOpen(false);
+    setDraftColorKey(nextColorKeyForNewGroup(groups, groupColors));
   }
 
   function startEditing(index: number) {
@@ -219,29 +236,46 @@ function GroupListPanel({
         </p>
       </div>
 
-      <div className="mb-3 space-y-2">
-        <div className="flex gap-2">
-          <Input
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addGroup();
-              }
-            }}
-            placeholder="Ex: Bastidores"
-            value={draft}
-          />
-          <Button onClick={addGroup} size="icon" type="button" variant="outline">
+      <div className="mb-3">
+        {!isAdding ? (
+          <Button onClick={openAddForm} size="icon" type="button" variant="outline">
             <Plus className="h-4 w-4" />
           </Button>
-        </div>
-
-        <ColorPresetPicker
-          label="Cor do novo grupo"
-          onChange={setDraftColorKey}
-          selectedKey={draftColorKey}
-        />
+        ) : (
+          <div className="flex items-start gap-2">
+            <ColorSwatchMenu
+              onChange={(key) => {
+                setDraftColorKey(key);
+                setIsAddColorMenuOpen(false);
+              }}
+              onOpenChange={setIsAddColorMenuOpen}
+              open={isAddColorMenuOpen}
+              selectedKey={draftColorKey}
+            />
+            <Input
+              autoFocus
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addGroup();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  cancelAddForm();
+                }
+              }}
+              placeholder="Ex: Bastidores"
+              value={draft}
+            />
+            <Button onClick={addGroup} size="icon" type="button" variant="outline">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button onClick={cancelAddForm} size="icon" type="button" variant="ghost">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
@@ -335,6 +369,73 @@ function GroupListPanel({
         ) : null}
       </div>
     </section>
+  );
+}
+
+function ColorSwatchMenu({
+  selectedKey,
+  open,
+  onOpenChange,
+  onChange,
+}: {
+  selectedKey: GroupColorPresetKey;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onChange: (key: GroupColorPresetKey) => void;
+}) {
+  const activePreset =
+    GROUP_COLOR_PRESETS.find((preset) => preset.key === selectedKey) ?? GROUP_COLOR_PRESETS[0]!;
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        aria-expanded={open}
+        className={cn(
+          "h-10 w-10 rounded-xl border border-[var(--border)] p-1.5 transition",
+          open
+            ? "bg-[rgba(25,16,43,0.95)] ring-2 ring-[rgba(249,87,192,0.22)]"
+            : "bg-[rgba(19,12,36,0.84)] hover:border-[#6a3d93]",
+        )}
+        onClick={() => onOpenChange(!open)}
+        title={`Cor do grupo: ${activePreset.label}`}
+        type="button"
+      >
+        <span
+          className={cn(
+            "block h-full w-full rounded-md border border-[rgba(255,255,255,0.22)] bg-gradient-to-r",
+            activePreset.tone,
+          )}
+        />
+        <span className="sr-only">Selecionar cor do grupo</span>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 top-12 z-20 w-[236px] rounded-xl border border-[var(--border)] bg-[rgba(14,9,26,0.96)] p-2 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
+          <div className="grid grid-cols-6 gap-2">
+            {GROUP_COLOR_PRESETS.map((preset) => {
+              const active = preset.key === selectedKey;
+              return (
+                <button
+                  className={cn(
+                    "h-7 rounded-md border bg-gradient-to-r transition",
+                    preset.tone,
+                    active
+                      ? "border-[#f5d7ff] ring-2 ring-[rgba(249,87,192,0.32)]"
+                      : "border-[rgba(255,255,255,0.14)] hover:border-[rgba(255,255,255,0.35)]",
+                  )}
+                  key={preset.key}
+                  onClick={() => onChange(preset.key)}
+                  title={preset.label}
+                  type="button"
+                >
+                  <span className="sr-only">{preset.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
