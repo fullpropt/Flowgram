@@ -37,6 +37,7 @@ body {
     radial-gradient(circle at 80% 86%, rgba(255, 154, 60, 0.16), transparent 24%),
     linear-gradient(160deg, #08050f 0%, #0f0921 36%, #120a1f 100%);
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 * {
@@ -114,6 +115,7 @@ body {
 }
 
 .rbc-calendar {
+  width: 100%;
   background: rgba(16, 11, 32, 0.82);
   border-radius: 1rem;
   border: 1px solid var(--border);
@@ -121,10 +123,19 @@ body {
   color: var(--foreground);
   backdrop-filter: blur(14px);
   box-shadow: 0 12px 30px rgba(3, 2, 7, 0.45);
+  min-width: 0;
 }
 
 .rbc-toolbar {
   margin-bottom: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rbc-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .rbc-toolbar-label {
@@ -164,4 +175,10 @@ body {
 
 .rbc-button-link {
   color: inherit;
+}
+
+.rbc-event-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

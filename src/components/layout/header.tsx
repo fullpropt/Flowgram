@@ -3,8 +3,9 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LogOut, Plus } from "lucide-react";
+import { LogOut, PanelLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 const routeCopy: Record<string, { title: string; subtitle: string }> = {
@@ -22,7 +23,17 @@ const routeCopy: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
-export function Header() {
+interface HeaderProps {
+  isSidebarCollapsed?: boolean;
+  onToggleMobileSidebar?: () => void;
+  onToggleSidebar?: () => void;
+}
+
+export function Header({
+  isSidebarCollapsed = false,
+  onToggleMobileSidebar,
+  onToggleSidebar,
+}: HeaderProps) {
   const pathname = usePathname();
   const openCardModal = useAppStore((state) => state.openCardModal);
 
@@ -44,6 +55,22 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            className="md:hidden"
+            onClick={onToggleMobileSidebar}
+            size="icon"
+            variant="outline"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            className="hidden md:inline-flex"
+            onClick={onToggleSidebar}
+            size="icon"
+            variant="outline"
+          >
+            <PanelLeft className={cn("h-4 w-4 transition-transform", isSidebarCollapsed && "rotate-180")} />
+          </Button>
           <Button
             className="rounded-xl"
             onClick={() => {

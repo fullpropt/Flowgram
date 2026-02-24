@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format, getDay, parse, startOfWeek } from "date-fns";
+import { addMinutes, format, getDay, parse, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, dateFnsLocalizer, type SlotInfo, type View } from "react-big-calendar";
 import withDragAndDrop, {
@@ -48,6 +48,10 @@ function canalFromPrompt(value: string | null): Canal {
   return "Feed";
 }
 
+function singleDayEventEnd(startIso: string) {
+  return addMinutes(new Date(startIso), 30);
+}
+
 export function CalendarView() {
   const cards = useAppStore((state) => state.cards);
   const calendarPosts = useAppStore((state) => state.calendarPosts);
@@ -69,7 +73,7 @@ export function CalendarView() {
         id: post.id,
         title: `${post.titulo} (${post.canal})`,
         start: new Date(post.dataInicio),
-        end: post.dataFim ? new Date(post.dataFim) : new Date(post.dataInicio),
+        end: singleDayEventEnd(post.dataInicio),
         resource: post,
       })),
     [calendarPosts],
@@ -96,19 +100,17 @@ export function CalendarView() {
     addCalendarPost({
       titulo,
       dataInicio: slot.start.toISOString(),
-      dataFim: slot.end.toISOString(),
       canal: canalFromPrompt(canalInput),
     });
   }
 
-  function handleDropFromOutside({ start, end }: DragFromOutsideItemArgs) {
+  function handleDropFromOutside({ start }: DragFromOutsideItemArgs) {
     if (!draggedCard) return;
 
     addCalendarPost({
       ideaCardId: draggedCard.id,
       titulo: draggedCard.titulo,
       dataInicio: new Date(start).toISOString(),
-      dataFim: new Date(end).toISOString(),
       canal:
         draggedCard.camadas.formato === "Reels"
           ? "Reels"
@@ -119,15 +121,14 @@ export function CalendarView() {
     setDraggedCardId(null);
   }
 
-  function handleMoveEvent({ event, start, end }: EventInteractionArgs<CalendarEvent>) {
+  function handleMoveEvent({ event, start }: EventInteractionArgs<CalendarEvent>) {
     updateCalendarPost(event.id, {
       dataInicio: new Date(start).toISOString(),
-      dataFim: new Date(end).toISOString(),
     });
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_1fr]">
+    <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
       <section className="panel h-fit p-4">
         <h2 className="mb-1 text-sm font-bold text-[var(--foreground)]">Cards nao agendados</h2>
         <p className="mb-4 text-xs leading-relaxed text-[var(--muted)]">
@@ -154,7 +155,7 @@ export function CalendarView() {
         </div>
       </section>
 
-      <section className="min-h-[760px]">
+      <section className="min-h-[760px] min-w-0">
         <DndProvider backend={HTML5Backend}>
           <DragAndDropCalendar
             culture="pt-BR"
@@ -184,7 +185,6 @@ export function CalendarView() {
             }}
             onDropFromOutside={handleDropFromOutside}
             onEventDrop={handleMoveEvent}
-            onEventResize={handleMoveEvent}
             onSelectEvent={(event) => {
               setSelectedPostId(event.id);
               setNotesDraft(event.resource.observacoes ?? "");
@@ -192,7 +192,6 @@ export function CalendarView() {
             onSelectSlot={handleCreateFromSlot}
             onView={setCurrentView}
             popup
-            resizable
             selectable
             startAccessor="start"
             style={{ height: 760 }}

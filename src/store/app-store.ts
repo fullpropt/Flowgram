@@ -73,11 +73,6 @@ function parseDate(iso: string) {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
-function getDefaultEnd(startIso: string, endIso?: string) {
-  if (endIso) return endIso;
-  return addDays(parseDate(startIso), 1).toISOString();
-}
-
 function pickCardByPillar(
   cards: IdeaCard[],
   pilar: Pilar,
@@ -206,7 +201,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       ideaCardId: input.ideaCardId,
       titulo: input.titulo.trim(),
       dataInicio: input.dataInicio,
-      dataFim: getDefaultEnd(input.dataInicio, input.dataFim),
       canal: input.canal,
       observacoes: input.observacoes?.trim(),
     };
@@ -231,10 +225,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           ? {
               ...post,
               ...updates,
-              dataFim: getDefaultEnd(
-                updates.dataInicio ?? post.dataInicio,
-                updates.dataFim ?? post.dataFim,
-              ),
+              dataFim:
+                updates.dataInicio !== undefined ? undefined : updates.dataFim ?? post.dataFim,
             }
           : post,
       );
@@ -312,7 +304,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         ideaCardId: card.id,
         titulo: card.titulo,
         dataInicio: date.toISOString(),
-        dataFim: addDays(date, 1).toISOString(),
         canal: toCanalFromCard(card),
       };
     });
