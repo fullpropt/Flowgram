@@ -48,13 +48,13 @@ export default function SettingsPage() {
     <div className="space-y-4">
       <section className="panel p-5 md:p-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-          Workspace
+          Lab
         </p>
         <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">
-          Configuracoes de Conteudo
+          Configuracoes Lab
         </h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Personalize grupos, objetivos e tags usados na criacao e organizacao dos cards.
+          Personalize grupos, objetivos e tags usados em todo o Flowgram Lab.
         </p>
       </section>
 

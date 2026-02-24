@@ -9,6 +9,7 @@ import {
   Lightbulb,
   LogOut,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   UserRound,
@@ -34,6 +35,12 @@ const navigationItems = [
     label: "Lixeira",
     description: "Recupere cards excluidos",
     icon: Trash2,
+  },
+  {
+    href: "/settings",
+    label: "Configuracoes Lab",
+    description: "Grupos, objetivos e tags",
+    icon: SlidersHorizontal,
   },
 ];
 
@@ -242,7 +249,7 @@ export function Sidebar({
           accountName={accountName}
           collapsed={false}
           onNavigate={onCloseMobile}
-          onOpenSettings={() => router.push("/settings")}
+          onOpenSettings={() => router.push("/account-settings")}
           onSignOut={() => signOut({ callbackUrl: "/login" })}
           pathname={pathname}
         />
@@ -258,7 +265,7 @@ export function Sidebar({
         <SidebarBody
           accountName={accountName}
           collapsed={collapsed}
-          onOpenSettings={() => router.push("/settings")}
+          onOpenSettings={() => router.push("/account-settings")}
           onSignOut={() => signOut({ callbackUrl: "/login" })}
           pathname={pathname}
         />

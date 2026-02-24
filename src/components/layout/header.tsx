@@ -24,9 +24,13 @@ const routeCopy: Record<string, { title: string; subtitle: string }> = {
     title: "Lixeira",
     subtitle: "Restaure cards excluidos dentro da janela de 7 dias.",
   },
-  settings: {
-    title: "Configuracoes",
+  labSettings: {
+    title: "Configuracoes Lab",
     subtitle: "Defina grupos, objetivos e tags para organizar seus cards.",
+  },
+  accountSettings: {
+    title: "Configuracao de Conta",
+    subtitle: "Altere nome da conta e senha de acesso.",
   },
 };
 
@@ -45,7 +49,8 @@ export function Header({
   const openCardModal = useAppStore((state) => state.openCardModal);
 
   const routeData = useMemo(() => {
-    if (pathname.includes("/settings")) return routeCopy.settings;
+    if (pathname.includes("/account-settings")) return routeCopy.accountSettings;
+    if (pathname.includes("/settings")) return routeCopy.labSettings;
     if (pathname.includes("/trash")) return routeCopy.trash;
     if (pathname.includes("/organize")) return routeCopy.organize;
     if (pathname.includes("/calendar")) return routeCopy.calendar;
