@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
   },
