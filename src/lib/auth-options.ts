@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
@@ -48,6 +49,14 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
       }
       return session;
+    },
+  },
+  logger: {
+    error(code, metadata) {
+      console.error("[next-auth][error]", code, metadata);
+    },
+    warn(code) {
+      console.warn("[next-auth][warn]", code);
     },
   },
 };

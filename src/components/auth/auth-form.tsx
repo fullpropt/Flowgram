@@ -44,7 +44,12 @@ export function AuthForm() {
       });
 
       if (result?.error) {
-        setErro("Email ou senha invalidos.");
+        if (result.error === "CredentialsSignin") {
+          setErro("Email ou senha invalidos.");
+        } else {
+          setErro("Falha de autenticacao. Verifique as variaveis NEXTAUTH no Railway.");
+          console.error("NextAuth signIn error:", result.error);
+        }
         return;
       }
 
