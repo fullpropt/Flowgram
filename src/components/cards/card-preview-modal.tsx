@@ -114,9 +114,9 @@ export function CardPreviewModal({
                   ) : null}
                 </div>
                 {isEditingTitle ? (
-                  <div className="pt-1">
+                  <div className="rounded-xl border border-[#6b448f] bg-[rgba(23,14,40,0.78)] p-2 shadow-[0_0_0_1px_rgba(248,87,178,0.08)_inset]">
                     <Input
-                      className="h-11 text-lg font-bold"
+                      className="h-11 border-[#7a4fb1] bg-[rgba(15,10,29,0.9)] text-lg font-bold"
                       onBlur={commitTitleEdit}
                       onChange={(event) => setTitleDraft(event.target.value)}
                       onKeyDown={(event) => {
@@ -136,12 +136,14 @@ export function CardPreviewModal({
                 ) : (
                   <DialogTitle asChild>
                     <button
-                      className="cursor-text text-left text-xl leading-tight font-semibold text-[var(--foreground)] underline-offset-4 hover:underline"
+                      className="w-full rounded-xl border border-[#5d3b86] bg-[linear-gradient(145deg,rgba(248,87,178,0.08),rgba(168,60,255,0.08),rgba(255,154,60,0.06))] px-3 py-2 text-left shadow-[0_10px_24px_rgba(5,3,10,0.35)] transition hover:border-[#8a54bc] hover:bg-[linear-gradient(145deg,rgba(248,87,178,0.12),rgba(168,60,255,0.1),rgba(255,154,60,0.08))]"
                       onClick={() => setIsEditingTitle(true)}
                       title="Clique para editar o titulo rapidamente"
                       type="button"
                     >
-                      {card.titulo}
+                      <span className="bg-[linear-gradient(135deg,var(--glow-pink),var(--glow-purple),var(--glow-orange))] bg-clip-text text-xl leading-tight font-semibold text-transparent">
+                        {card.titulo}
+                      </span>
                     </button>
                   </DialogTitle>
                 )}
