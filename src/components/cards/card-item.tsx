@@ -4,7 +4,8 @@ import { useState } from "react";
 import { ChevronDown, Copy, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatoLabel, objetivoLabel, statusLabel } from "@/lib/constants";
+import { FormatoSymbol } from "@/components/ui/formato-symbol";
+import { objetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { IdeaCard } from "@/types/models";
 
@@ -125,9 +126,11 @@ export function CardItem({
           {statusLabel[card.status]}
         </Badge>
         {card.camadas.formato ? (
-          <Badge className="border-[#4e3a73] bg-[rgba(88,58,133,0.14)] text-[#d9c8fb]">
-            {formatoLabel[card.camadas.formato]}
-          </Badge>
+          <span title={`Formato: ${card.camadas.formato}`}>
+            <Badge className="border-[#4e3a73] bg-[rgba(88,58,133,0.14)] text-[#d9c8fb]">
+              <FormatoSymbol formato={card.camadas.formato} />
+            </Badge>
+          </span>
         ) : null}
       </div>
 

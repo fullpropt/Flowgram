@@ -85,7 +85,7 @@ export default function IdeasPage() {
       </section>
 
       <section className="panel-soft p-4">
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.9fr_1fr_1fr_auto]">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.9fr_1fr_1fr_auto] xl:items-end">
           <Input
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por titulo, descricao ou tags"

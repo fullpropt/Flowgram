@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormatoSymbol } from "@/components/ui/formato-symbol";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatoLabel, objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
+import { objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { IdeaCard } from "@/types/models";
 
@@ -100,7 +101,11 @@ export function CardPreviewModal({
 
               <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
                 {card.camadas.formato ? (
-                  <Badge>{formatoLabel[card.camadas.formato]}</Badge>
+                  <span title={`Formato: ${card.camadas.formato}`}>
+                    <Badge>
+                      <FormatoSymbol formato={card.camadas.formato} />
+                    </Badge>
+                  </span>
                 ) : null}
                 {card.camadas.objetivo ? (
                   <Badge>{objetivoLabel[card.camadas.objetivo]}</Badge>
