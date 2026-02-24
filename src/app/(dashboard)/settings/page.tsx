@@ -4,25 +4,26 @@ import { useMemo, useState } from "react";
 import { Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  GROUP_COLOR_PRESETS,
+  type GroupColorPresetKey,
+  getDefaultGroupColorKey,
+  getGroupTone,
+  resolveGroupColorKey,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
-import { WorkspaceTaxonomyConfig } from "@/types/models";
 
-type TaxonomyKey = keyof WorkspaceTaxonomyConfig;
+type ListTaxonomyKey = "objetivos" | "tags";
 
 export default function SettingsPage() {
   const taxonomyConfig = useAppStore((state) => state.taxonomyConfig);
   const setTaxonomyList = useAppStore((state) => state.setTaxonomyList);
+  const setTaxonomyConfig = useAppStore((state) => state.setTaxonomyConfig);
 
   const sections = useMemo(
     () =>
       [
-        {
-          key: "grupos",
-          title: "Grupos",
-          subtitle: "Categorias usadas para organizar os cards no Banco de Ideias e no Calendario.",
-          placeholder: "Ex: Bastidores",
-        },
         {
           key: "objetivos",
           title: "Objetivos",
@@ -36,7 +37,7 @@ export default function SettingsPage() {
           placeholder: "Ex: Instagram",
         },
       ] as const satisfies Array<{
-        key: TaxonomyKey;
+        key: ListTaxonomyKey;
         title: string;
         subtitle: string;
         placeholder: string;
@@ -59,6 +60,12 @@ export default function SettingsPage() {
       </section>
 
       <div className="grid gap-4 xl:grid-cols-3">
+        <GroupListPanel
+          groupColors={taxonomyConfig.groupColors}
+          groups={taxonomyConfig.grupos}
+          onChange={(grupos, groupColors) => setTaxonomyConfig({ grupos, groupColors })}
+        />
+
         {sections.map((section) => (
           <EditableListPanel
             items={taxonomyConfig[section.key]}
@@ -69,6 +76,307 @@ export default function SettingsPage() {
             title={section.title}
           />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function normalizeStringList(values: string[]) {
+  const seen = new Set<string>();
+  const next: string[] = [];
+
+  values.forEach((value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    next.push(trimmed);
+  });
+
+  return next;
+}
+
+function sanitizeGroupColors(
+  groups: string[],
+  colorMap: Record<string, string>,
+) {
+  const next: Record<string, string> = {};
+
+  groups.forEach((group) => {
+    const resolved = resolveGroupColorKey(group, colorMap) ?? getDefaultGroupColorKey(group);
+    next[group] = resolved;
+  });
+
+  return next;
+}
+
+function nextColorKeyForNewGroup(existingGroups: string[], colorMap: Record<string, string>) {
+  const usedCounts = new Map<string, number>();
+  existingGroups.forEach((group) => {
+    const key = resolveGroupColorKey(group, colorMap);
+    if (!key) return;
+    usedCounts.set(key, (usedCounts.get(key) ?? 0) + 1);
+  });
+
+  const sorted = [...GROUP_COLOR_PRESETS].sort(
+    (a, b) => (usedCounts.get(a.key) ?? 0) - (usedCounts.get(b.key) ?? 0),
+  );
+
+  return sorted[0]?.key ?? GROUP_COLOR_PRESETS[0]!.key;
+}
+
+function GroupListPanel({
+  groups,
+  groupColors,
+  onChange,
+}: {
+  groups: string[];
+  groupColors: Record<string, string>;
+  onChange: (groups: string[], groupColors: Record<string, string>) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [draftColorKey, setDraftColorKey] = useState<GroupColorPresetKey>(() =>
+    nextColorKeyForNewGroup(groups, groupColors),
+  );
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [editingColorKey, setEditingColorKey] = useState<GroupColorPresetKey>(
+    GROUP_COLOR_PRESETS[0]!.key,
+  );
+
+  function commit(nextGroupsRaw: string[], nextColorMapRaw: Record<string, string>) {
+    const nextGroups = normalizeStringList(nextGroupsRaw);
+    const nextGroupColors = sanitizeGroupColors(nextGroups, nextColorMapRaw);
+    onChange(nextGroups, nextGroupColors);
+    setDraftColorKey(nextColorKeyForNewGroup(nextGroups, nextGroupColors));
+  }
+
+  function addGroup() {
+    const value = draft.trim();
+    if (!value) return;
+    commit([...groups, value], { ...groupColors, [value]: draftColorKey });
+    setDraft("");
+  }
+
+  function startEditing(index: number) {
+    const group = groups[index];
+    if (!group) return;
+    setEditingIndex(index);
+    setEditingValue(group);
+    setEditingColorKey(resolveGroupColorKey(group, groupColors) ?? getDefaultGroupColorKey(group));
+  }
+
+  function cancelEditing() {
+    setEditingIndex(null);
+    setEditingValue("");
+  }
+
+  function saveEditing() {
+    if (editingIndex === null) return;
+    const previousName = groups[editingIndex];
+    if (!previousName) {
+      cancelEditing();
+      return;
+    }
+
+    const nextName = editingValue.trim();
+    if (!nextName) {
+      cancelEditing();
+      return;
+    }
+
+    const nextGroupsRaw = groups.map((group, index) => (index === editingIndex ? nextName : group));
+    const nextColorMap = { ...groupColors };
+    const previousColor =
+      nextColorMap[previousName] ??
+      resolveGroupColorKey(previousName, groupColors) ??
+      getDefaultGroupColorKey(previousName);
+    delete nextColorMap[previousName];
+    nextColorMap[nextName] = editingColorKey || previousColor;
+
+    commit(nextGroupsRaw, nextColorMap);
+    cancelEditing();
+  }
+
+  function removeGroup(indexToRemove: number) {
+    const target = groups[indexToRemove];
+    const nextGroups = groups.filter((_, index) => index !== indexToRemove);
+    const nextColorMap = { ...groupColors };
+    if (target) delete nextColorMap[target];
+    commit(nextGroups, nextColorMap);
+    if (editingIndex === indexToRemove) cancelEditing();
+  }
+
+  return (
+    <section className="panel-soft flex min-h-[320px] flex-col p-4">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+          Grupos
+        </p>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Categorias usadas para organizar os cards no Banco de Ideias e no Calendario.
+        </p>
+      </div>
+
+      <div className="mb-3 space-y-2">
+        <div className="flex gap-2">
+          <Input
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addGroup();
+              }
+            }}
+            placeholder="Ex: Bastidores"
+            value={draft}
+          />
+          <Button onClick={addGroup} size="icon" type="button" variant="outline">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <ColorPresetPicker
+          label="Cor do novo grupo"
+          onChange={setDraftColorKey}
+          selectedKey={draftColorKey}
+        />
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+        {groups.map((group, index) => {
+          const isEditing = editingIndex === index;
+          const colorKey = resolveGroupColorKey(group, groupColors) ?? getDefaultGroupColorKey(group);
+
+          return (
+            <div
+              className="rounded-xl border border-[var(--border)] bg-[rgba(18,11,33,0.78)] p-2"
+              key={`${group}-${index}`}
+            >
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      onChange={(event) => setEditingValue(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          saveEditing();
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelEditing();
+                        }
+                      }}
+                      value={editingValue}
+                    />
+                    <Button onClick={saveEditing} size="icon" type="button" variant="outline">
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={cancelEditing} size="icon" type="button" variant="ghost">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <ColorPresetPicker
+                    compact
+                    label="Cor do grupo"
+                    onChange={setEditingColorKey}
+                    selectedKey={editingColorKey}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn(
+                        "h-4 w-4 shrink-0 rounded-full border border-[rgba(255,255,255,0.22)] bg-gradient-to-br",
+                        getGroupTone(group, groupColors),
+                      )}
+                      title="Cor do grupo"
+                    />
+                    <p
+                      className="min-w-0 flex-1 truncate px-1 text-sm font-medium text-[var(--foreground)]"
+                      title={group}
+                    >
+                      {group}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      onClick={() => startEditing(index)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      onClick={() => removeGroup(index)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {groups.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[var(--border)] bg-[rgba(16,10,28,0.6)] px-3 py-4 text-sm text-[var(--muted)]">
+            Nenhum grupo configurado.
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function ColorPresetPicker({
+  selectedKey,
+  onChange,
+  label,
+  compact = false,
+}: {
+  selectedKey: GroupColorPresetKey;
+  onChange: (key: GroupColorPresetKey) => void;
+  label: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="grid gap-1">
+      <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+        {label}
+      </span>
+      <div className={cn("grid grid-cols-6 gap-2", compact && "gap-1.5")}>
+        {GROUP_COLOR_PRESETS.map((preset) => {
+          const active = preset.key === selectedKey;
+          return (
+            <button
+              className={cn(
+                "relative h-7 rounded-lg border transition",
+                "bg-gradient-to-r",
+                preset.tone,
+                active
+                  ? "border-[#f5d7ff] ring-2 ring-[rgba(249,87,192,0.32)]"
+                  : "border-[rgba(255,255,255,0.14)] hover:border-[rgba(255,255,255,0.35)]",
+                compact && "h-6 rounded-md",
+              )}
+              key={preset.key}
+              onClick={() => onChange(preset.key)}
+              title={preset.label}
+              type="button"
+            >
+              <span className="sr-only">{preset.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -91,26 +399,10 @@ function EditableListPanel({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
 
-  function normalize(values: string[]) {
-    const seen = new Set<string>();
-    const next: string[] = [];
-
-    values.forEach((value) => {
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      const key = trimmed.toLocaleLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      next.push(trimmed);
-    });
-
-    return next;
-  }
-
   function addItem() {
     const value = draft.trim();
     if (!value) return;
-    onChange(normalize([...items, value]));
+    onChange(normalizeStringList([...items, value]));
     setDraft("");
   }
 
@@ -118,7 +410,7 @@ function EditableListPanel({
     if (editingIndex === null) return;
 
     const nextItems = items.map((item, index) => (index === editingIndex ? editingValue : item));
-    onChange(normalize(nextItems));
+    onChange(normalizeStringList(nextItems));
     setEditingIndex(null);
     setEditingValue("");
   }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FormatoSymbol } from "@/components/ui/formato-symbol";
 import { getGroupTone, getObjetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { IdeaCard } from "@/types/models";
 
 interface CardItemProps {
@@ -38,6 +39,7 @@ export function CardItem({
   onDelete,
   onDragStart,
 }: CardItemProps) {
+  const groupColors = useAppStore((state) => state.taxonomyConfig.groupColors);
   const canCollapse = collapsible && !compact;
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const showExpandedDetails = !canCollapse || isExpanded;
@@ -57,7 +59,7 @@ export function CardItem({
       <div
         className={cn(
           "absolute left-0 top-0 h-1 w-full bg-gradient-to-r",
-          getGroupTone(card.pilar),
+          getGroupTone(card.pilar, groupColors),
         )}
       />
 

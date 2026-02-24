@@ -3,7 +3,7 @@
 import { addDays } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
-import { DEFAULT_WORKSPACE_TAXONOMY } from "@/lib/constants";
+import { DEFAULT_WORKSPACE_TAXONOMY, GROUP_COLOR_PRESETS, getDefaultGroupColorKey } from "@/lib/constants";
 import { loadAppState, saveAppState } from "@/services/state-api.repository";
 import {
   CalendarPost,
@@ -27,9 +27,10 @@ interface AppState {
   activeCardId: string | null;
   initializeData: () => Promise<void>;
   setTaxonomyList: (
-    kind: keyof WorkspaceTaxonomyConfig,
+    kind: "grupos" | "objetivos" | "tags",
     values: string[],
   ) => void;
+  setTaxonomyConfig: (updates: Partial<WorkspaceTaxonomyConfig>) => void;
   openCardModal: (cardId?: string | null) => void;
   closeCardModal: () => void;
   addCard: (input: IdeaCardInput) => IdeaCard;
@@ -93,10 +94,29 @@ function normalizeTaxonomyList(values: string[]) {
 function normalizeTaxonomyConfig(
   input?: Partial<WorkspaceTaxonomyConfig> | null,
 ): WorkspaceTaxonomyConfig {
+  const grupos = normalizeTaxonomyList(input?.grupos ?? DEFAULT_WORKSPACE_TAXONOMY.grupos);
+  const objetivos = normalizeTaxonomyList(input?.objetivos ?? DEFAULT_WORKSPACE_TAXONOMY.objetivos);
+  const tags = normalizeTaxonomyList(input?.tags ?? DEFAULT_WORKSPACE_TAXONOMY.tags);
+
+  const allowedColorKeys = new Set<string>(GROUP_COLOR_PRESETS.map((preset) => preset.key));
+  const rawGroupColors =
+    input?.groupColors && typeof input.groupColors === "object" ? input.groupColors : {};
+  const groupColors: Record<string, string> = {};
+
+  grupos.forEach((group) => {
+    const configured = rawGroupColors[group];
+    if (typeof configured === "string" && allowedColorKeys.has(configured)) {
+      groupColors[group] = configured;
+      return;
+    }
+    groupColors[group] = getDefaultGroupColorKey(group);
+  });
+
   return {
-    grupos: normalizeTaxonomyList(input?.grupos ?? DEFAULT_WORKSPACE_TAXONOMY.grupos),
-    objetivos: normalizeTaxonomyList(input?.objetivos ?? DEFAULT_WORKSPACE_TAXONOMY.objetivos),
-    tags: normalizeTaxonomyList(input?.tags ?? DEFAULT_WORKSPACE_TAXONOMY.tags),
+    grupos,
+    objetivos,
+    tags,
+    groupColors,
   };
 }
 
@@ -223,6 +243,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       const taxonomyConfig = normalizeTaxonomyConfig({
         ...state.taxonomyConfig,
         [kind]: values,
+      });
+      saveTaxonomyConfigToStorage(taxonomyConfig);
+      return { taxonomyConfig };
+    });
+  },
+  setTaxonomyConfig: (updates) => {
+    set((state) => {
+      const taxonomyConfig = normalizeTaxonomyConfig({
+        ...state.taxonomyConfig,
+        ...updates,
       });
       saveTaxonomyConfigToStorage(taxonomyConfig);
       return { taxonomyConfig };

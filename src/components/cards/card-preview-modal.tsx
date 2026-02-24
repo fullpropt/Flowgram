@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { getGroupLabel, getGroupTone, getObjetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 import { Canal, IdeaCard } from "@/types/models";
 
 interface CardPreviewModalProps {
@@ -35,6 +36,7 @@ export function CardPreviewModal({
   canal,
   extraActions,
 }: CardPreviewModalProps) {
+  const groupColors = useAppStore((state) => state.taxonomyConfig.groupColors);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +84,7 @@ export function CardPreviewModal({
             <div
               className={cn(
                 "h-1 w-full bg-gradient-to-r",
-                getGroupTone(card.pilar),
+                getGroupTone(card.pilar, groupColors),
               )}
             />
 

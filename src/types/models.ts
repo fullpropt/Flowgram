@@ -59,6 +59,7 @@ export interface WorkspaceTaxonomyConfig {
   grupos: string[];
   objetivos: string[];
   tags: string[];
+  groupColors: Record<string, string>;
 }
 
 export interface IdeaCardInput {
