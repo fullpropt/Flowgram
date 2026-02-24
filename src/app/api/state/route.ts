@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { buildInitialIdeaCards } from "@/data/seed";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/prisma";
-import { CalendarPost, IdeaCard } from "@/types/models";
+import { CalendarPost, IdeaCard, TrashedIdeaCard } from "@/types/models";
 
 function unauthorized() {
   return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
@@ -54,6 +54,32 @@ function mapPostFromDb(post: {
   };
 }
 
+function mapTrashedCardFromDb(record: {
+  id: string;
+  card: Prisma.JsonValue;
+  relatedPosts: Prisma.JsonValue;
+  deletedAt: Date;
+  expiresAt: Date;
+}): TrashedIdeaCard | null {
+  const card =
+    record.card && typeof record.card === "object"
+      ? (record.card as unknown as IdeaCard)
+      : null;
+
+  if (!card || !card.id || !card.titulo) return null;
+
+  const relatedCalendarPosts = Array.isArray(record.relatedPosts)
+    ? (record.relatedPosts as unknown as CalendarPost[])
+    : [];
+
+  return {
+    card,
+    relatedCalendarPosts,
+    deletedAt: record.deletedAt.toISOString(),
+    expiresAt: record.expiresAt.toISOString(),
+  };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
@@ -92,9 +118,22 @@ export async function GET() {
     orderBy: { dataInicio: "asc" },
   });
 
+  const now = new Date();
+  await prisma.trashedIdeaCard.deleteMany({
+    where: { userId, expiresAt: { lte: now } },
+  });
+
+  const trashedCardsDb = await prisma.trashedIdeaCard.findMany({
+    where: { userId, expiresAt: { gt: now } },
+    orderBy: { deletedAt: "desc" },
+  });
+
   return NextResponse.json({
     cards: cardsDb.map(mapCardFromDb),
     calendarPosts: postsDb.map(mapPostFromDb),
+    trashedCards: trashedCardsDb
+      .map(mapTrashedCardFromDb)
+      .filter((item): item is TrashedIdeaCard => item !== null),
   });
 }
 
@@ -106,13 +145,16 @@ export async function PUT(request: Request) {
   const body = (await request.json()) as {
     cards?: IdeaCard[];
     calendarPosts?: CalendarPost[];
+    trashedCards?: TrashedIdeaCard[];
   };
 
   const cards = Array.isArray(body.cards) ? body.cards : [];
   const calendarPosts = Array.isArray(body.calendarPosts) ? body.calendarPosts : [];
+  const trashedCards = Array.isArray(body.trashedCards) ? body.trashedCards : [];
 
   await prisma.$transaction([
     prisma.calendarPost.deleteMany({ where: { userId } }),
+    prisma.trashedIdeaCard.deleteMany({ where: { userId } }),
     prisma.ideaCard.deleteMany({ where: { userId } }),
     prisma.ideaCard.createMany({
       data: cards.map((card) => ({
@@ -138,6 +180,16 @@ export async function PUT(request: Request) {
         dataFim: post.dataFim ? new Date(post.dataFim) : null,
         canal: post.canal,
         observacoes: post.observacoes ?? null,
+      })),
+    }),
+    prisma.trashedIdeaCard.createMany({
+      data: trashedCards.map((item) => ({
+        id: item.card.id,
+        userId,
+        card: item.card as unknown as Prisma.InputJsonValue,
+        relatedPosts: item.relatedCalendarPosts as unknown as Prisma.InputJsonValue,
+        deletedAt: new Date(item.deletedAt),
+        expiresAt: new Date(item.expiresAt),
       })),
     }),
   ]);

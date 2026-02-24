@@ -12,11 +12,13 @@ import {
   IdeaCardInput,
   IdeaStatus,
   Pilar,
+  TrashedIdeaCard,
 } from "@/types/models";
 
 interface AppState {
   cards: IdeaCard[];
   calendarPosts: CalendarPost[];
+  trashedCards: TrashedIdeaCard[];
   hydrated: boolean;
   isCardModalOpen: boolean;
   activeCardId: string | null;
@@ -27,6 +29,8 @@ interface AppState {
   updateCard: (id: string, updates: Partial<IdeaCardInput>) => void;
   duplicateCard: (id: string) => void;
   deleteCard: (id: string) => void;
+  restoreTrashedCard: (cardId: string) => void;
+  purgeTrashedCard: (cardId: string) => void;
   moveCardPillar: (id: string, pilar: Pilar) => void;
   markCardStatus: (id: string, status: IdeaStatus) => void;
   addCalendarPost: (input: CalendarPostInput) => CalendarPost;
@@ -87,9 +91,33 @@ function pickCardByPillar(
   return candidates[0];
 }
 
-async function persistState(cards: IdeaCard[], calendarPosts: CalendarPost[]) {
+const TRASH_RETENTION_DAYS = 7;
+
+function isTrashExpired(item: TrashedIdeaCard, referenceDate = new Date()) {
+  return new Date(item.expiresAt).getTime() <= referenceDate.getTime();
+}
+
+function pruneExpiredTrash(items: TrashedIdeaCard[], referenceDate = new Date()) {
+  return items.filter((item) => !isTrashExpired(item, referenceDate));
+}
+
+function buildTrashedItem(card: IdeaCard, relatedCalendarPosts: CalendarPost[]): TrashedIdeaCard {
+  const deletedAt = new Date();
+  return {
+    card,
+    relatedCalendarPosts,
+    deletedAt: deletedAt.toISOString(),
+    expiresAt: addDays(deletedAt, TRASH_RETENTION_DAYS).toISOString(),
+  };
+}
+
+async function persistState(
+  cards: IdeaCard[],
+  calendarPosts: CalendarPost[],
+  trashedCards: TrashedIdeaCard[],
+) {
   try {
-    await saveAppState(cards, calendarPosts);
+    await saveAppState(cards, calendarPosts, trashedCards);
   } catch (error) {
     console.error("Falha ao persistir estado remoto", error);
   }
@@ -98,6 +126,7 @@ async function persistState(cards: IdeaCard[], calendarPosts: CalendarPost[]) {
 export const useAppStore = create<AppState>((set, get) => ({
   cards: [],
   calendarPosts: [],
+  trashedCards: [],
   hydrated: false,
   isCardModalOpen: false,
   activeCardId: null,
@@ -106,11 +135,19 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const state = await loadAppState();
+      const cards = state.cards ?? [];
+      const calendarPosts = state.calendarPosts ?? [];
+      const trashedCards = pruneExpiredTrash(state.trashedCards ?? []);
       set({
-        cards: state.cards ?? [],
-        calendarPosts: state.calendarPosts ?? [],
+        cards,
+        calendarPosts,
+        trashedCards,
         hydrated: true,
       });
+
+      if ((state.trashedCards ?? []).length !== trashedCards.length) {
+        void persistState(cards, calendarPosts, trashedCards);
+      }
     } catch (error) {
       console.error("Falha ao carregar estado inicial", error);
       set({ hydrated: true });
@@ -123,7 +160,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newCard = normalizeCard(input);
     set((state) => {
       const cards = [newCard, ...state.cards];
-      void persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts, state.trashedCards);
       return { cards };
     });
     return newCard;
@@ -143,7 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : card,
       );
-      void persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts, state.trashedCards);
       return { cards };
     });
   },
@@ -163,18 +200,77 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set((state) => {
       const cards = [duplicated, ...state.cards];
-      void persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts, state.trashedCards);
       return { cards };
     });
   },
   deleteCard: (id) => {
     set((state) => {
+      const cardToDelete = state.cards.find((card) => card.id === id);
+      if (!cardToDelete) return {};
+
       const cards = state.cards.filter((card) => card.id !== id);
-      const calendarPosts = state.calendarPosts.filter(
-        (post) => post.ideaCardId !== id,
+      const relatedCalendarPosts = state.calendarPosts.filter(
+        (post) => post.ideaCardId === id,
       );
-      void persistState(cards, calendarPosts);
-      return { cards, calendarPosts };
+      const calendarPosts = state.calendarPosts.filter((post) => post.ideaCardId !== id);
+      const trashedCards = pruneExpiredTrash([
+        buildTrashedItem(cardToDelete, relatedCalendarPosts),
+        ...state.trashedCards.filter((item) => item.card.id !== id),
+      ]);
+
+      void persistState(cards, calendarPosts, trashedCards);
+      return { cards, calendarPosts, trashedCards };
+    });
+  },
+  restoreTrashedCard: (cardId) => {
+    set((state) => {
+      const now = new Date();
+      const validTrash = pruneExpiredTrash(state.trashedCards, now);
+      const target = validTrash.find((item) => item.card.id === cardId);
+      if (!target) {
+        if (validTrash.length !== state.trashedCards.length) {
+          void persistState(state.cards, state.calendarPosts, validTrash);
+          return { trashedCards: validTrash };
+        }
+        return {};
+      }
+
+      const trashedCards = validTrash.filter((item) => item.card.id !== cardId);
+      const existingCardIds = new Set(state.cards.map((card) => card.id));
+      const cards = existingCardIds.has(target.card.id)
+        ? state.cards
+        : [target.card, ...state.cards];
+
+      const existingPostIds = new Set(state.calendarPosts.map((post) => post.id));
+      const restoredPosts = target.relatedCalendarPosts.filter((post) => !existingPostIds.has(post.id));
+      const calendarPosts = restoredPosts.length > 0
+        ? [...restoredPosts, ...state.calendarPosts]
+        : state.calendarPosts;
+
+      const restoredPostIds = new Set(restoredPosts.map((post) => post.ideaCardId).filter(Boolean));
+      const normalizedCards = cards.map((card) => {
+        if (card.id !== target.card.id) return card;
+        if (restoredPostIds.has(card.id)) {
+          return { ...card, status: "Agendado" as const, updatedAt: nowIso() };
+        }
+        if (card.status === "Agendado") {
+          return { ...card, status: "Criado" as const, updatedAt: nowIso() };
+        }
+        return card;
+      });
+
+      void persistState(normalizedCards, calendarPosts, trashedCards);
+      return { cards: normalizedCards, calendarPosts, trashedCards };
+    });
+  },
+  purgeTrashedCard: (cardId) => {
+    set((state) => {
+      const trashedCards = pruneExpiredTrash(
+        state.trashedCards.filter((item) => item.card.id !== cardId),
+      );
+      void persistState(state.cards, state.calendarPosts, trashedCards);
+      return { trashedCards };
     });
   },
   moveCardPillar: (id, pilar) => {
@@ -182,7 +278,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cards = state.cards.map((card) =>
         card.id === id ? { ...card, pilar, updatedAt: nowIso() } : card,
       );
-      void persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts, state.trashedCards);
       return { cards };
     });
   },
@@ -191,7 +287,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cards = state.cards.map((card) =>
         card.id === id ? { ...card, status, updatedAt: nowIso() } : card,
       );
-      void persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts, state.trashedCards);
       return { cards };
     });
   },
@@ -212,7 +308,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           ? { ...card, status: "Agendado" as const, updatedAt: nowIso() }
           : card,
       );
-      void persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts, state.trashedCards);
       return { cards, calendarPosts };
     });
 
@@ -230,7 +326,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : post,
       );
-      void persistState(state.cards, calendarPosts);
+      void persistState(state.cards, calendarPosts, state.trashedCards);
       return { calendarPosts };
     });
   },
@@ -249,7 +345,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { ...card, status: "Criado" as const, updatedAt: nowIso() };
       });
 
-      void persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts, state.trashedCards);
       return { cards, calendarPosts };
     });
   },
@@ -316,7 +412,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           ? { ...card, status: "Agendado" as const, updatedAt: nowIso() }
           : card,
       );
-      void persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts, state.trashedCards);
       return { cards, calendarPosts };
     });
 

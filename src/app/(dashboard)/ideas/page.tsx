@@ -1,7 +1,9 @@
 "use client";
 
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { type ComponentType, useMemo, useState } from "react";
-import { FileText, Funnel, Search } from "lucide-react";
+import { FileText, Funnel, RotateCcw, Search, Trash2 } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
 import { CardPreviewModal } from "@/components/cards/card-preview-modal";
 import { BoardColumns } from "@/components/organize/board-columns";
@@ -14,10 +16,13 @@ import { Formato, IdeaStatus } from "@/types/models";
 export default function IdeasPage() {
   const cards = useAppStore((state) => state.cards);
   const hydrated = useAppStore((state) => state.hydrated);
+  const trashedCards = useAppStore((state) => state.trashedCards);
   const openCardModal = useAppStore((state) => state.openCardModal);
   const updateCard = useAppStore((state) => state.updateCard);
   const duplicateCard = useAppStore((state) => state.duplicateCard);
   const deleteCard = useAppStore((state) => state.deleteCard);
+  const restoreTrashedCard = useAppStore((state) => state.restoreTrashedCard);
+  const purgeTrashedCard = useAppStore((state) => state.purgeTrashedCard);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | "">("");
@@ -162,6 +167,72 @@ export default function IdeasPage() {
           Nenhum card encontrado com os filtros atuais.
         </section>
       ) : null}
+
+      <section className="panel-soft p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+              Lixeira temporaria
+            </p>
+            <h3 className="text-base font-bold text-[var(--foreground)]">
+              Recuperacao em ate 7 dias
+            </h3>
+            <p className="text-sm text-[var(--muted)]">
+              Cards excluidos podem ser restaurados antes da expiracao.
+            </p>
+          </div>
+          <span className="rounded-full border border-[var(--border)] bg-[rgba(20,12,34,0.85)] px-3 py-1 text-xs font-semibold text-[#d9c6f8]">
+            {trashedCards.length} item(ns)
+          </span>
+        </div>
+
+        {trashedCards.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {trashedCards.map((item) => (
+              <div
+                className="rounded-xl border border-[var(--border)] bg-[rgba(18,11,33,0.82)] p-3"
+                key={`${item.card.id}-${item.deletedAt}`}
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                      {item.card.titulo}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Excluido em {format(new Date(item.deletedAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {" • "}expira em{" "}
+                      {format(new Date(item.expiresAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => restoreTrashedCard(item.card.id)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Restaurar
+                    </Button>
+                    <Button
+                      onClick={() => purgeTrashedCard(item.card.id)}
+                      size="sm"
+                      variant="danger"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Excluir permanente
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[rgba(18,11,33,0.72)] p-4 text-sm text-[var(--muted)]">
+            Nenhum card na lixeira no momento.
+          </div>
+        )}
+      </section>
 
       <CardPreviewModal
         card={previewCard}

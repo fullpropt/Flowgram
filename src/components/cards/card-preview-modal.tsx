@@ -49,7 +49,6 @@ export function CardPreviewModal({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsEditingTitle(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitleDraft(card?.titulo ?? "");
   }, [card?.id, card?.titulo, open]);
 

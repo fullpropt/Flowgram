@@ -1,8 +1,9 @@
-import { CalendarPost, IdeaCard } from "@/types/models";
+import { CalendarPost, IdeaCard, TrashedIdeaCard } from "@/types/models";
 
 interface AppStateResponse {
   cards: IdeaCard[];
   calendarPosts: CalendarPost[];
+  trashedCards: TrashedIdeaCard[];
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -25,11 +26,12 @@ export async function loadAppState(): Promise<AppStateResponse> {
 export async function saveAppState(
   cards: IdeaCard[],
   calendarPosts: CalendarPost[],
+  trashedCards: TrashedIdeaCard[],
 ): Promise<void> {
   const response = await fetch("/api/state", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cards, calendarPosts }),
+    body: JSON.stringify({ cards, calendarPosts, trashedCards }),
   });
 
   if (!response.ok) {

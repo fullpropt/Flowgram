@@ -53,6 +53,13 @@ export interface CalendarPost {
   observacoes?: string;
 }
 
+export interface TrashedIdeaCard {
+  card: IdeaCard;
+  relatedCalendarPosts: CalendarPost[];
+  deletedAt: string;
+  expiresAt: string;
+}
+
 export interface IdeaCardInput {
   titulo: string;
   descricao?: string;
