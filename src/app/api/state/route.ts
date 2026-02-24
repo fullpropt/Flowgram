@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { buildInitialIdeaCards } from "@/data/seed";
@@ -8,6 +8,13 @@ import { CalendarPost, IdeaCard, TrashedIdeaCard } from "@/types/models";
 
 function unauthorized() {
   return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+}
+
+function isMissingTrashTableError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2021" || error.code === "P2022")
+  );
 }
 
 function mapCardFromDb(card: {
@@ -119,14 +126,27 @@ export async function GET() {
   });
 
   const now = new Date();
-  await prisma.trashedIdeaCard.deleteMany({
-    where: { userId, expiresAt: { lte: now } },
-  });
+  let trashedCardsDb: Array<{
+    id: string;
+    card: Prisma.JsonValue;
+    relatedPosts: Prisma.JsonValue;
+    deletedAt: Date;
+    expiresAt: Date;
+  }> = [];
 
-  const trashedCardsDb = await prisma.trashedIdeaCard.findMany({
-    where: { userId, expiresAt: { gt: now } },
-    orderBy: { deletedAt: "desc" },
-  });
+  try {
+    await prisma.trashedIdeaCard.deleteMany({
+      where: { userId, expiresAt: { lte: now } },
+    });
+
+    trashedCardsDb = await prisma.trashedIdeaCard.findMany({
+      where: { userId, expiresAt: { gt: now } },
+      orderBy: { deletedAt: "desc" },
+    });
+  } catch (error) {
+    if (!isMissingTrashTableError(error)) throw error;
+    console.warn("Tabela TrashedIdeaCard ainda nao existe. Retornando lixeira vazia.");
+  }
 
   return NextResponse.json({
     cards: cardsDb.map(mapCardFromDb),
@@ -152,47 +172,83 @@ export async function PUT(request: Request) {
   const calendarPosts = Array.isArray(body.calendarPosts) ? body.calendarPosts : [];
   const trashedCards = Array.isArray(body.trashedCards) ? body.trashedCards : [];
 
-  await prisma.$transaction([
-    prisma.calendarPost.deleteMany({ where: { userId } }),
-    prisma.trashedIdeaCard.deleteMany({ where: { userId } }),
-    prisma.ideaCard.deleteMany({ where: { userId } }),
-    prisma.ideaCard.createMany({
-      data: cards.map((card) => ({
-        id: card.id,
-        userId,
-        titulo: card.titulo,
-        descricao: card.descricao ?? null,
-        pilar: card.pilar ?? null,
-        camadas: card.camadas as Prisma.InputJsonValue,
-        status: card.status,
-        tags: card.tags as Prisma.InputJsonValue,
-        createdAt: new Date(card.createdAt),
-        updatedAt: new Date(card.updatedAt),
-      })),
-    }),
-    prisma.calendarPost.createMany({
-      data: calendarPosts.map((post) => ({
-        id: post.id,
-        userId,
-        ideaCardId: post.ideaCardId ?? null,
-        titulo: post.titulo,
-        dataInicio: new Date(post.dataInicio),
-        dataFim: post.dataFim ? new Date(post.dataFim) : null,
-        canal: post.canal,
-        observacoes: post.observacoes ?? null,
-      })),
-    }),
-    prisma.trashedIdeaCard.createMany({
-      data: trashedCards.map((item) => ({
-        id: item.card.id,
-        userId,
-        card: item.card as unknown as Prisma.InputJsonValue,
-        relatedPosts: item.relatedCalendarPosts as unknown as Prisma.InputJsonValue,
-        deletedAt: new Date(item.deletedAt),
-        expiresAt: new Date(item.expiresAt),
-      })),
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.calendarPost.deleteMany({ where: { userId } }),
+      prisma.trashedIdeaCard.deleteMany({ where: { userId } }),
+      prisma.ideaCard.deleteMany({ where: { userId } }),
+      prisma.ideaCard.createMany({
+        data: cards.map((card) => ({
+          id: card.id,
+          userId,
+          titulo: card.titulo,
+          descricao: card.descricao ?? null,
+          pilar: card.pilar ?? null,
+          camadas: card.camadas as Prisma.InputJsonValue,
+          status: card.status,
+          tags: card.tags as Prisma.InputJsonValue,
+          createdAt: new Date(card.createdAt),
+          updatedAt: new Date(card.updatedAt),
+        })),
+      }),
+      prisma.calendarPost.createMany({
+        data: calendarPosts.map((post) => ({
+          id: post.id,
+          userId,
+          ideaCardId: post.ideaCardId ?? null,
+          titulo: post.titulo,
+          dataInicio: new Date(post.dataInicio),
+          dataFim: post.dataFim ? new Date(post.dataFim) : null,
+          canal: post.canal,
+          observacoes: post.observacoes ?? null,
+        })),
+      }),
+      prisma.trashedIdeaCard.createMany({
+        data: trashedCards.map((item) => ({
+          id: item.card.id,
+          userId,
+          card: item.card as unknown as Prisma.InputJsonValue,
+          relatedPosts: item.relatedCalendarPosts as unknown as Prisma.InputJsonValue,
+          deletedAt: new Date(item.deletedAt),
+          expiresAt: new Date(item.expiresAt),
+        })),
+      }),
+    ]);
+  } catch (error) {
+    if (!isMissingTrashTableError(error)) throw error;
+
+    console.warn("Tabela TrashedIdeaCard ainda nao existe. Salvando sem lixeira.");
+    await prisma.$transaction([
+      prisma.calendarPost.deleteMany({ where: { userId } }),
+      prisma.ideaCard.deleteMany({ where: { userId } }),
+      prisma.ideaCard.createMany({
+        data: cards.map((card) => ({
+          id: card.id,
+          userId,
+          titulo: card.titulo,
+          descricao: card.descricao ?? null,
+          pilar: card.pilar ?? null,
+          camadas: card.camadas as Prisma.InputJsonValue,
+          status: card.status,
+          tags: card.tags as Prisma.InputJsonValue,
+          createdAt: new Date(card.createdAt),
+          updatedAt: new Date(card.updatedAt),
+        })),
+      }),
+      prisma.calendarPost.createMany({
+        data: calendarPosts.map((post) => ({
+          id: post.id,
+          userId,
+          ideaCardId: post.ideaCardId ?? null,
+          titulo: post.titulo,
+          dataInicio: new Date(post.dataInicio),
+          dataFim: post.dataFim ? new Date(post.dataFim) : null,
+          canal: post.canal,
+          observacoes: post.observacoes ?? null,
+        })),
+      }),
+    ]);
+  }
 
   return NextResponse.json({ ok: true });
 }

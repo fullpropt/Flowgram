@@ -4,7 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getSession, signOut } from "next-auth/react";
-import { CalendarDays, Lightbulb, LogOut, Settings, Sparkles, UserRound } from "lucide-react";
+import {
+  CalendarDays,
+  Lightbulb,
+  LogOut,
+  Settings,
+  Sparkles,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +28,12 @@ const navigationItems = [
     label: "Calendario",
     description: "Planeje a publicacao",
     icon: CalendarDays,
+  },
+  {
+    href: "/trash",
+    label: "Lixeira",
+    description: "Recupere cards excluidos",
+    icon: Trash2,
   },
 ];
 
