@@ -1,10 +1,8 @@
-import { IdeaCard } from "@/types/models";
+import { v4 as uuidv4 } from "uuid";
+import { IdeaCard, IdeaCardInput } from "@/types/models";
 
-const seedDate = "2026-02-23T10:00:00.000Z";
-
-export const initialIdeaCards: IdeaCard[] = [
+const seedTemplates: IdeaCardInput[] = [
   {
-    id: "seed-1",
     titulo: "Por que seu direct vira atendimento infinito",
     descricao:
       "Mostrar o custo operacional de responder tudo manualmente no Instagram.",
@@ -18,11 +16,8 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Ideia",
     tags: ["instagram", "automacao", "atendimento"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-2",
     titulo: "3 sinais de que voce esta perdendo vendas no direct",
     descricao: "Checklist simples para identificar vazamentos no funil.",
     pilar: "Dor",
@@ -35,14 +30,11 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Roteirizado",
     tags: ["vendas", "funil", "direct"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-3",
     titulo: "Como funciona um funil de DM em 4 passos",
     descricao: "Explicar fluxo de captura, qualificacao, oferta e fechamento.",
-    pilar: "Educação",
+    pilar: "Educacao",
     camadas: {
       macroTema: "Funil de mensagens",
       formato: "Carrossel",
@@ -52,14 +44,11 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Ideia",
     tags: ["funil", "educacao", "dm"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-4",
     titulo: "Diferenca entre resposta rapida e automacao inteligente",
     descricao: "Comparar respostas prontas com fluxos orientados por objetivo.",
-    pilar: "Educação",
+    pilar: "Educacao",
     camadas: {
       macroTema: "Automacao pratica",
       formato: "Print",
@@ -69,49 +58,40 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Roteirizado",
     tags: ["automacao", "instagram", "crm"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-5",
     titulo: "Como o ZapVender qualifica leads automaticamente",
     descricao: "Mostrar o fluxo de perguntas e segmentacao dentro do WhatsApp.",
-    pilar: "Solução",
+    pilar: "Solucao",
     camadas: {
       macroTema: "Qualificacao automatica",
       formato: "Reels",
-      objetivo: "Conversão",
+      objetivo: "Conversao",
       hook: "Lead frio tambem compra quando e bem conduzido.",
       cta: "Clique no link da bio para teste.",
     },
     status: "Ideia",
     tags: ["zapvender", "lead", "whatsapp"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-6",
     titulo: "Caso real: +37% de fechamento em 30 dias",
     descricao:
       "Storytelling rapido de cliente que automatizou o atendimento e aumentou a conversao.",
-    pilar: "Solução",
+    pilar: "Solucao",
     camadas: {
       macroTema: "Resultados",
       formato: "Carrossel",
-      objetivo: "Conversão",
+      objetivo: "Conversao",
       hook: "Nao foi sorte. Foi processo.",
       cta: "Quer aplicar no seu negocio? Fale com a gente.",
     },
     status: "Criado",
     tags: ["case", "resultado", "vendas"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-7",
     titulo: "Bastidores: como desenhamos um novo fluxo",
     descricao: "Mostrar quadro de planejamento e criterios da equipe de produto.",
-    pilar: "Construção",
+    pilar: "Construcao",
     camadas: {
       macroTema: "Produto",
       formato: "Story",
@@ -121,32 +101,26 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Ideia",
     tags: ["bastidores", "produto", "story"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-8",
     titulo: "Roadmap aberto: prioridades do proximo trimestre",
     descricao:
       "Transparencia de roadmap com foco em recursos pedidos por clientes.",
-    pilar: "Construção",
+    pilar: "Construcao",
     camadas: {
       macroTema: "Roadmap",
-      formato: "Imagem única",
+      formato: "Imagem unica",
       objetivo: "Lista de espera",
       hook: "Voce pediu, a gente colocou no roadmap.",
       cta: "Entre na lista de espera para acesso antecipado.",
     },
     status: "Roteirizado",
     tags: ["roadmap", "comunidade", "lancamento"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-9",
     titulo: "Template de mensagem para recuperar leads sem resposta",
     descricao: "Entregar um mini template pratico que gera retorno.",
-    pilar: "Educação",
+    pilar: "Educacao",
     camadas: {
       macroTema: "Recuperacao de lead",
       formato: "Carrossel",
@@ -156,14 +130,11 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Ideia",
     tags: ["template", "lead", "engajamento"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
   {
-    id: "seed-10",
     titulo: "Comparativo: manual x ZapVender em uma semana",
     descricao: "Mostrar horas economizadas e ganhos de performance.",
-    pilar: "Solução",
+    pilar: "Solucao",
     camadas: {
       macroTema: "Produtividade",
       formato: "Print",
@@ -173,7 +144,20 @@ export const initialIdeaCards: IdeaCard[] = [
     },
     status: "Ideia",
     tags: ["produtividade", "zapvender", "benchmark"],
-    createdAt: seedDate,
-    updatedAt: seedDate,
   },
 ];
+
+export function buildInitialIdeaCards(): IdeaCard[] {
+  const now = new Date().toISOString();
+  return seedTemplates.map((template) => ({
+    id: uuidv4(),
+    titulo: template.titulo ?? "",
+    descricao: template.descricao,
+    pilar: template.pilar,
+    camadas: template.camadas ?? {},
+    status: template.status ?? "Ideia",
+    tags: template.tags ?? [],
+    createdAt: now,
+    updatedAt: now,
+  }));
+}

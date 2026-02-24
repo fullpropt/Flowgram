@@ -3,13 +3,7 @@
 import { addDays } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
-import { initialIdeaCards } from "@/data/seed";
-import {
-  loadCalendarPosts,
-  loadIdeaCards,
-  saveCalendarPosts,
-  saveIdeaCards,
-} from "@/services/local-storage.repository";
+import { loadAppState, saveAppState } from "@/services/state-api.repository";
 import {
   CalendarPost,
   CalendarPostInput,
@@ -26,7 +20,7 @@ interface AppState {
   hydrated: boolean;
   isCardModalOpen: boolean;
   activeCardId: string | null;
-  initializeData: () => void;
+  initializeData: () => Promise<void>;
   openCardModal: (cardId?: string | null) => void;
   closeCardModal: () => void;
   addCard: (input: IdeaCardInput) => IdeaCard;
@@ -84,11 +78,6 @@ function getDefaultEnd(startIso: string, endIso?: string) {
   return addDays(parseDate(startIso), 1).toISOString();
 }
 
-function persistState(cards: IdeaCard[], calendarPosts: CalendarPost[]) {
-  saveIdeaCards(cards);
-  saveCalendarPosts(calendarPosts);
-}
-
 function pickCardByPillar(
   cards: IdeaCard[],
   pilar: Pilar,
@@ -103,22 +92,34 @@ function pickCardByPillar(
   return candidates[0];
 }
 
+async function persistState(cards: IdeaCard[], calendarPosts: CalendarPost[]) {
+  try {
+    await saveAppState(cards, calendarPosts);
+  } catch (error) {
+    console.error("Falha ao persistir estado remoto", error);
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   cards: [],
   calendarPosts: [],
   hydrated: false,
   isCardModalOpen: false,
   activeCardId: null,
-  initializeData: () => {
-    const state = get();
-    if (state.hydrated) return;
+  initializeData: async () => {
+    if (get().hydrated) return;
 
-    const storedCards = loadIdeaCards();
-    const storedPosts = loadCalendarPosts();
-    const cardsToUse = storedCards.length > 0 ? storedCards : initialIdeaCards;
-
-    persistState(cardsToUse, storedPosts);
-    set({ cards: cardsToUse, calendarPosts: storedPosts, hydrated: true });
+    try {
+      const state = await loadAppState();
+      set({
+        cards: state.cards ?? [],
+        calendarPosts: state.calendarPosts ?? [],
+        hydrated: true,
+      });
+    } catch (error) {
+      console.error("Falha ao carregar estado inicial", error);
+      set({ hydrated: true });
+    }
   },
   openCardModal: (cardId = null) =>
     set({ isCardModalOpen: true, activeCardId: cardId }),
@@ -127,7 +128,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newCard = normalizeCard(input);
     set((state) => {
       const cards = [newCard, ...state.cards];
-      persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts);
       return { cards };
     });
     return newCard;
@@ -147,7 +148,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : card,
       );
-      persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts);
       return { cards };
     });
   },
@@ -167,7 +168,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set((state) => {
       const cards = [duplicated, ...state.cards];
-      persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts);
       return { cards };
     });
   },
@@ -177,7 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const calendarPosts = state.calendarPosts.filter(
         (post) => post.ideaCardId !== id,
       );
-      persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts);
       return { cards, calendarPosts };
     });
   },
@@ -186,7 +187,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cards = state.cards.map((card) =>
         card.id === id ? { ...card, pilar, updatedAt: nowIso() } : card,
       );
-      persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts);
       return { cards };
     });
   },
@@ -195,7 +196,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cards = state.cards.map((card) =>
         card.id === id ? { ...card, status, updatedAt: nowIso() } : card,
       );
-      persistState(cards, state.calendarPosts);
+      void persistState(cards, state.calendarPosts);
       return { cards };
     });
   },
@@ -217,7 +218,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           ? { ...card, status: "Agendado" as const, updatedAt: nowIso() }
           : card,
       );
-      persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts);
       return { cards, calendarPosts };
     });
 
@@ -237,14 +238,14 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
           : post,
       );
-      persistState(state.cards, calendarPosts);
+      void persistState(state.cards, calendarPosts);
       return { calendarPosts };
     });
   },
   deleteCalendarPost: (id) => {
     set((state) => {
       const calendarPosts = state.calendarPosts.filter((post) => post.id !== id);
-      persistState(state.cards, calendarPosts);
+      void persistState(state.cards, calendarPosts);
       return { calendarPosts };
     });
   },
@@ -266,7 +267,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const used = new Set<string>();
     const suggestions: IdeaCard[] = [];
-    const requiredPillars: Pilar[] = ["Dor", "Educação", "Solução"];
+    const requiredPillars: Pilar[] = ["Dor", "Educacao", "Solucao"];
 
     requiredPillars.forEach((pilar) => {
       const picked = pickCardByPillar(basePool, pilar, used);
@@ -277,7 +278,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     if (includeConstrucao) {
-      const buildCard = pickCardByPillar(basePool, "Construção", used);
+      const buildCard = pickCardByPillar(basePool, "Construcao", used);
       if (buildCard) suggestions.push(buildCard);
     }
 
@@ -312,7 +313,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           ? { ...card, status: "Agendado" as const, updatedAt: nowIso() }
           : card,
       );
-      persistState(cards, calendarPosts);
+      void persistState(cards, calendarPosts);
       return { cards, calendarPosts };
     });
 

@@ -1,6 +1,6 @@
 import { Formato, IdeaStatus, Objetivo, Pilar } from "@/types/models";
 
-export const PILARES: Pilar[] = ["Dor", "Educação", "Solução", "Construção"];
+export const PILARES: Pilar[] = ["Dor", "Educacao", "Solucao", "Construcao"];
 export const STATUSES: IdeaStatus[] = [
   "Ideia",
   "Roteirizado",
@@ -12,7 +12,7 @@ export const FORMATOS: Formato[] = [
   "Carrossel",
   "Reels",
   "Print",
-  "Imagem única",
+  "Imagem unica",
   "Story",
 ];
 export const OBJETIVOS: Objetivo[] = [
@@ -20,21 +20,21 @@ export const OBJETIVOS: Objetivo[] = [
   "Autoridade",
   "Lista de espera",
   "Hype",
-  "Conversão",
+  "Conversao",
 ];
 
 export const pilarLabel: Record<Pilar, string> = {
   Dor: "Dor",
-  Educação: "Educação",
-  Solução: "Solução",
-  Construção: "Construção",
+  Educacao: "Educacao",
+  Solucao: "Solucao",
+  Construcao: "Construcao",
 };
 
 export const formatoLabel: Record<Formato, string> = {
   Carrossel: "Carrossel",
   Reels: "Reels",
   Print: "Print",
-  "Imagem única": "Imagem única",
+  "Imagem unica": "Imagem unica",
   Story: "Story",
 };
 
@@ -43,7 +43,7 @@ export const objetivoLabel: Record<Objetivo, string> = {
   Autoridade: "Autoridade",
   "Lista de espera": "Lista de espera",
   Hype: "Hype",
-  Conversão: "Conversão",
+  Conversao: "Conversao",
 };
 
 export const statusLabel: Record<IdeaStatus, string> = {

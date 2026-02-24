@@ -1,10 +1,10 @@
-export type Pilar = "Dor" | "Educação" | "Solução" | "Construção";
+export type Pilar = "Dor" | "Educacao" | "Solucao" | "Construcao";
 
 export type Formato =
   | "Carrossel"
   | "Reels"
   | "Print"
-  | "Imagem única"
+  | "Imagem unica"
   | "Story";
 
 export type Objetivo =
@@ -12,7 +12,7 @@ export type Objetivo =
   | "Autoridade"
   | "Lista de espera"
   | "Hype"
-  | "Conversão";
+  | "Conversao";
 
 export type IdeaStatus =
   | "Ideia"

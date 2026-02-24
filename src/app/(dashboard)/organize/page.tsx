@@ -46,7 +46,7 @@ export default function OrganizePage() {
           <div className="space-y-1">
             <h2 className="text-sm font-semibold">Gerar Semana (MVP)</h2>
             <p className="text-xs text-slate-500">
-              Sugere Dor, Educação e Solução. Construção é opcional.
+              Sugere Dor, Educacao e Solucao. Construcao e opcional.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export default function OrganizePage() {
                 onChange={(event) => setIncludeConstrucao(event.target.checked)}
                 type="checkbox"
               />
-              Incluir Construção
+              Incluir Construcao
             </label>
 
             <Button

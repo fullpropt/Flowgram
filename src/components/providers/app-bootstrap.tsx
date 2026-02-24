@@ -7,7 +7,7 @@ export function AppBootstrap() {
   const initializeData = useAppStore((state) => state.initializeData);
 
   useEffect(() => {
-    initializeData();
+    void initializeData();
   }, [initializeData]);
 
   return null;

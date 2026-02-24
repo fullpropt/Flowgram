@@ -18,7 +18,7 @@ const navigationItems = [
   },
   {
     href: "/calendar",
-    label: "Calendário",
+    label: "Calendario",
     icon: CalendarDays,
   },
 ];

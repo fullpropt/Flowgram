@@ -37,9 +37,9 @@ export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
   const groupedCards = useMemo(() => {
     const groups: Record<Pilar, IdeaCard[]> = {
       Dor: [],
-      Educação: [],
-      Solução: [],
-      Construção: [],
+      Educacao: [],
+      Solucao: [],
+      Construcao: [],
     };
 
     cards.forEach((card) => {

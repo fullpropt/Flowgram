@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { Plus } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { LogOut, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
 
@@ -12,7 +13,7 @@ export function Header() {
 
   const routeTitle = useMemo(() => {
     if (pathname.includes("/organize")) return "Organizar";
-    if (pathname.includes("/calendar")) return "Calendário";
+    if (pathname.includes("/calendar")) return "Calendario";
     return "Banco de Ideias";
   }, [pathname]);
 
@@ -25,15 +26,24 @@ export function Header() {
         <h1 className="text-base font-semibold">{routeTitle}</h1>
       </div>
 
-      <Button
-        className="rounded-xl"
-        onClick={() => {
-          openCardModal(null);
-        }}
-      >
-        <Plus className="h-4 w-4" />
-        Novo Card
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          className="rounded-xl"
+          onClick={() => {
+            openCardModal(null);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Novo Card
+        </Button>
+        <Button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          size="icon"
+          variant="outline"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </div>
     </header>
   );
 }
