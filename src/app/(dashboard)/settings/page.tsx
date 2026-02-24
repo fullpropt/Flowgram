@@ -238,9 +238,11 @@ function GroupListPanel({
 
       <div className="mb-3">
         {!isAdding ? (
-          <Button onClick={openAddForm} size="icon" type="button" variant="outline">
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex justify-center">
+            <Button onClick={openAddForm} size="icon" type="button" variant="outline">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         ) : (
           <div className="flex items-start gap-2">
             <ColorSwatchMenu
@@ -497,6 +499,7 @@ function EditableListPanel({
   onChange: (values: string[]) => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
 
@@ -505,6 +508,12 @@ function EditableListPanel({
     if (!value) return;
     onChange(normalizeStringList([...items, value]));
     setDraft("");
+    setIsAdding(false);
+  }
+
+  function cancelAddForm() {
+    setDraft("");
+    setIsAdding(false);
   }
 
   function saveEdit() {
@@ -533,21 +542,44 @@ function EditableListPanel({
         <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
       </div>
 
-      <div className="mb-3 flex gap-2">
-        <Input
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              addItem();
-            }
-          }}
-          placeholder={placeholder}
-          value={draft}
-        />
-        <Button onClick={addItem} size="icon" type="button" variant="outline">
-          <Plus className="h-4 w-4" />
-        </Button>
+      <div className="mb-3">
+        {!isAdding ? (
+          <div className="flex justify-center">
+            <Button
+              onClick={() => setIsAdding(true)}
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              autoFocus
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addItem();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  cancelAddForm();
+                }
+              }}
+              placeholder={placeholder}
+              value={draft}
+            />
+            <Button onClick={addItem} size="icon" type="button" variant="outline">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button onClick={cancelAddForm} size="icon" type="button" variant="ghost">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
