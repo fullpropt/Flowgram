@@ -3,14 +3,18 @@
 @import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 
 :root {
-  --background: #f5f7fb;
+  --background: #f3f5fb;
   --foreground: #0f172a;
   --card: #ffffff;
+  --card-foreground: #0f172a;
   --muted: #64748b;
-  --border: #dbe2ee;
-  --primary: #1f4ed8;
+  --muted-soft: #94a3b8;
+  --border: #dde4f0;
+  --ring: #c7d7ff;
+  --primary: #224bcc;
   --primary-foreground: #ffffff;
-  --secondary: #edf2ff;
+  --secondary: #e8efff;
+  --accent: #f5f8ff;
   --danger: #dc2626;
 }
 
@@ -24,47 +28,92 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  background-image:
+    radial-gradient(circle at 5% 0%, rgba(34, 75, 204, 0.08), transparent 28%),
+    radial-gradient(circle at 95% 100%, rgba(148, 163, 184, 0.1), transparent 26%);
+  min-height: 100vh;
 }
 
 * {
   border-color: var(--border);
 }
 
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.panel-soft {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+}
+
 .rbc-toolbar button {
   border: 1px solid var(--border);
   background: white;
-  border-radius: 0.6rem;
+  border-radius: 0.75rem;
   color: var(--foreground);
+  height: 2.2rem;
+  padding: 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .rbc-toolbar button:hover,
 .rbc-toolbar button:focus {
-  background: #edf2ff;
+  background: #eff4ff;
 }
 
 .rbc-toolbar button.rbc-active {
-  background: #1f4ed8;
-  border-color: #1f4ed8;
+  background: var(--primary);
+  border-color: var(--primary);
   color: white;
 }
 
 .rbc-event {
-  background: #1f4ed8;
+  background: var(--primary);
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.8rem;
 }
 
 .rbc-today {
-  background: #eef3ff;
+  background: #edf2ff;
 }
 
 .rbc-off-range-bg {
-  background: #f8fafc;
+  background: #f9fbff;
 }
 
 .rbc-calendar {
   background: white;
   border-radius: 1rem;
   border: 1px solid var(--border);
-  padding: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.rbc-toolbar {
+  margin-bottom: 1rem;
+}
+
+.rbc-toolbar-label {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.rbc-header {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top-color: #e9eef7;
 }

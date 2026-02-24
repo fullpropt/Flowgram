@@ -96,7 +96,7 @@ export function CardModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Titulo
@@ -147,7 +147,7 @@ export function CardModal() {
             />
           </div>
 
-          <div className="rounded-xl border border-[var(--border)] bg-slate-50/60 p-3">
+          <div className="panel-soft p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Camadas
             </p>
@@ -236,7 +236,7 @@ export function CardModal() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] pt-4">
             {activeCard ? (
               <Button
                 onClick={() => {
@@ -285,7 +285,7 @@ function SelectField({
     <div className="space-y-2">
       <label className="text-xs text-slate-500">{label}</label>
       <select
-        className="flex h-10 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[#bfd0ff] focus:ring-2 focus:ring-[#dbe7ff]"
+        className="flex h-10 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[#e6edff]"
         onChange={(event) => onChange(event.target.value)}
         value={value ?? ""}
       >

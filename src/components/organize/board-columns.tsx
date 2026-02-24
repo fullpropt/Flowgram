@@ -70,7 +70,11 @@ export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
     >
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         {PILARES.map((pilar) => (
-          <BoardColumn key={pilar} pilar={pilar}>
+          <BoardColumn
+            cardCount={groupedCards[pilar].length}
+            key={pilar}
+            pilar={pilar}
+          >
             <SortableContext
               items={groupedCards[pilar].map((card) => card.id)}
               strategy={verticalListSortingStrategy}
@@ -96,9 +100,11 @@ export function BoardColumns({ cards, onOpenCard }: BoardColumnsProps) {
 
 function BoardColumn({
   pilar,
+  cardCount,
   children,
 }: {
   pilar: Pilar;
+  cardCount: number;
   children: React.ReactNode;
 }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -109,13 +115,16 @@ function BoardColumn({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-white p-3",
-        isOver && "border-[#8ca8ff] bg-[#f6f9ff]",
+        "panel-soft p-3",
+        isOver && "border-[#8ca8ff] bg-[#f4f8ff]",
       )}
       ref={setNodeRef}
     >
-      <header className="mb-3 border-b border-[var(--border)] pb-2">
-        <h3 className="text-sm font-semibold">{pilar}</h3>
+      <header className="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2">
+        <h3 className="text-sm font-bold text-slate-800">{pilar}</h3>
+        <span className="rounded-full border border-[#d7e2fb] bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+          {cardCount}
+        </span>
       </header>
       {children}
     </section>

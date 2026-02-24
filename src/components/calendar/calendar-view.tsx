@@ -127,9 +127,9 @@ export function CalendarView() {
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_1fr]">
-      <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
-        <h2 className="mb-1 text-sm font-semibold">Cards nao agendados</h2>
-        <p className="mb-4 text-xs text-slate-500">
+      <section className="panel h-fit p-4">
+        <h2 className="mb-1 text-sm font-bold text-slate-900">Cards nao agendados</h2>
+        <p className="mb-4 text-xs leading-relaxed text-slate-500">
           Arraste um card para uma data no calendario.
         </p>
 
@@ -146,7 +146,7 @@ export function CalendarView() {
             />
           ))}
           {unscheduledCards.length === 0 ? (
-            <p className="rounded-xl bg-slate-50 px-3 py-4 text-sm text-slate-500">
+            <p className="rounded-xl border border-[var(--border)] bg-slate-50 px-3 py-4 text-sm text-slate-500">
               Todos os cards ja estao agendados.
             </p>
           ) : null}

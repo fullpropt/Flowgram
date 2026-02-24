@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ComponentType, useMemo, useState } from "react";
+import { FileText, Funnel, Search } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,10 +38,35 @@ export default function IdeasPage() {
     });
   }, [cards, formatFilter, pilarFilter, search, statusFilter]);
 
+  const agendados = useMemo(
+    () => cards.filter((card) => card.status === "Agendado").length,
+    [cards],
+  );
+
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
+      <section className="panel p-4 md:p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+              Visao geral
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-slate-900">Cards de Conteudo</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Filtre, edite e organize suas ideias de forma rapida.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <StatChip icon={FileText} label="Total" value={String(cards.length)} />
+            <StatChip icon={Funnel} label="Filtrados" value={String(filteredCards.length)} />
+            <StatChip icon={Search} label="Agendados" value={String(agendados)} />
+          </div>
+        </div>
+      </section>
+
+      <section className="panel-soft p-4">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.7fr_1fr_1fr_1fr_auto]">
           <Input
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por titulo, descricao ou tags"
@@ -73,15 +99,13 @@ export default function IdeasPage() {
             }}
             variant="outline"
           >
-            Limpar filtros
+            Limpar
           </Button>
         </div>
       </section>
 
       {!hydrated ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-5 text-sm text-slate-500">
-          Carregando cards...
-        </div>
+        <div className="panel p-5 text-sm text-slate-500">Carregando cards...</div>
       ) : null}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -97,7 +121,7 @@ export default function IdeasPage() {
       </section>
 
       {hydrated && filteredCards.length === 0 ? (
-        <section className="rounded-2xl border border-dashed border-[var(--border)] bg-white p-10 text-center text-sm text-slate-500">
+        <section className="panel-soft p-10 text-center text-sm text-slate-500">
           Nenhum card encontrado com os filtros atuais.
         </section>
       ) : null}
@@ -118,7 +142,7 @@ function FilterSelect({
 }) {
   return (
     <select
-      className="h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm outline-none focus:border-[#bfd0ff] focus:ring-2 focus:ring-[#dbe7ff]"
+      className="h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[#e6edff]"
       onChange={(event) => onChange(event.target.value)}
       value={value}
     >
@@ -129,5 +153,25 @@ function FilterSelect({
         </option>
       ))}
     </select>
+  );
+}
+
+function StatChip({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-white px-3 py-2">
+      <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className="text-base font-bold text-slate-900">{value}</p>
+    </div>
   );
 }

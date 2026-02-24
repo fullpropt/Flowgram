@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { WandSparkles } from "lucide-react";
 import { CardItem } from "@/components/cards/card-item";
 import { BoardColumns } from "@/components/organize/board-columns";
 import { Button } from "@/components/ui/button";
@@ -41,19 +42,22 @@ export default function OrganizePage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-[var(--border)] bg-white p-4">
+      <section className="panel p-4 md:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold">Gerar Semana (MVP)</h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+              Planejamento inteligente
+            </p>
+            <h2 className="text-xl font-bold text-slate-900">Gerar Semana</h2>
+            <p className="text-sm text-slate-500">
               Sugere Dor, Educacao e Solucao. Construcao e opcional.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Inicio da semana
+                Inicio
               </label>
               <Input
                 onChange={(event) => setStartDate(event.target.value)}
@@ -62,7 +66,7 @@ export default function OrganizePage() {
               />
             </div>
 
-            <label className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm">
+            <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-slate-700">
               <input
                 checked={includeConstrucao}
                 onChange={(event) => setIncludeConstrucao(event.target.checked)}
@@ -81,13 +85,14 @@ export default function OrganizePage() {
               }}
               variant="secondary"
             >
+              <WandSparkles className="h-4 w-4" />
               Gerar Semana
             </Button>
           </div>
         </div>
 
         {suggestions.length > 0 ? (
-          <div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-3">
+          <div className="panel-soft mt-4 space-y-3 p-3">
             <p className="text-xs text-slate-500">
               Sugestoes para{" "}
               <strong>
@@ -130,9 +135,7 @@ export default function OrganizePage() {
           onOpenCard={(cardId) => openCardModal(cardId)}
         />
       ) : (
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-5 text-sm text-slate-500">
-          Carregando board...
-        </div>
+        <div className="panel p-5 text-sm text-slate-500">Carregando board...</div>
       )}
     </div>
   );

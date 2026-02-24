@@ -58,7 +58,7 @@ export function AuthForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-2xl border border-[var(--border)] bg-white p-6 shadow-sm">
+    <div className="panel mx-auto w-full max-w-md p-6">
       <div className="mb-5 space-y-2 text-center">
         <h1 className="text-2xl font-bold text-slate-900">Flowgram</h1>
         <p className="text-sm text-slate-500">
@@ -66,10 +66,10 @@ export function AuthForm() {
         </p>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+      <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-[#eff3fb] p-1">
         <button
           className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-            mode === "login" ? "bg-white shadow-sm" : "text-slate-600"
+            mode === "login" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
           }`}
           onClick={() => setMode("login")}
           type="button"
@@ -78,7 +78,7 @@ export function AuthForm() {
         </button>
         <button
           className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-            mode === "register" ? "bg-white shadow-sm" : "text-slate-600"
+            mode === "register" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
           }`}
           onClick={() => setMode("register")}
           type="button"
@@ -113,7 +113,7 @@ export function AuthForm() {
         />
 
         {erro ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {erro}
           </p>
         ) : null}

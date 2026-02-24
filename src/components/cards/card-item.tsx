@@ -19,6 +19,13 @@ interface CardItemProps {
   onDragStart?: () => void;
 }
 
+const pilarTone: Partial<Record<NonNullable<IdeaCard["pilar"]>, string>> = {
+  Dor: "from-rose-200/70 to-rose-100/50",
+  Educacao: "from-sky-200/70 to-sky-100/50",
+  Solucao: "from-emerald-200/70 to-emerald-100/50",
+  Construcao: "from-violet-200/70 to-violet-100/50",
+};
+
 export function CardItem({
   card,
   className,
@@ -33,7 +40,7 @@ export function CardItem({
   return (
     <article
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:border-[#c8d7ff] hover:shadow-md",
+        "group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[2px] hover:border-[#c9d8ff] hover:shadow-[0_8px_22px_rgba(15,23,42,0.08)]",
         className,
       )}
       draggable={draggable}
@@ -42,20 +49,25 @@ export function CardItem({
       role="button"
       tabIndex={0}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="line-clamp-2 text-sm font-semibold text-slate-900">
-            {card.titulo}
-          </h3>
+      <div
+        className={cn(
+          "absolute left-0 top-0 h-1 w-full bg-gradient-to-r",
+          card.pilar ? pilarTone[card.pilar] : "from-slate-200 to-slate-100",
+        )}
+      />
+
+      <div className="mb-3 mt-1 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{card.titulo}</h3>
           {card.descricao && !compact ? (
-            <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">
               {card.descricao}
             </p>
           ) : null}
         </div>
         {showActions ? (
           <div
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 opacity-80 transition group-hover:opacity-100"
             onClick={(event) => event.stopPropagation()}
           >
             <Button onClick={onDuplicate} size="icon" title="Duplicar" variant="ghost">
@@ -66,32 +78,33 @@ export function CardItem({
             </Button>
           </div>
         ) : (
-          <Pencil className="mt-0.5 h-4 w-4 text-slate-400" />
+          <Pencil className="mt-0.5 h-4 w-4 text-slate-300" />
         )}
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
         {card.pilar ? <Badge>{pilarLabel[card.pilar]}</Badge> : null}
-        <Badge className="bg-[#f0f9ff] text-[#0369a1]">
+        <Badge className="border-[#cfe3ff] bg-[#f4f9ff] text-[#25539f]">
           {statusLabel[card.status]}
         </Badge>
       </div>
 
-      <div className="space-y-1.5 text-xs text-slate-600">
+      <div className="space-y-2 text-xs text-slate-600">
         {card.camadas.macroTema ? (
-          <p>
-            <span className="font-semibold">Macro:</span> {card.camadas.macroTema}
+          <p className="line-clamp-1">
+            <span className="font-semibold text-slate-700">Macro tema:</span>{" "}
+            {card.camadas.macroTema}
           </p>
         ) : null}
         {card.camadas.formato ? (
           <p>
-            <span className="font-semibold">Formato:</span>{" "}
+            <span className="font-semibold text-slate-700">Formato:</span>{" "}
             {formatoLabel[card.camadas.formato]}
           </p>
         ) : null}
         {card.camadas.objetivo ? (
           <p>
-            <span className="font-semibold">Objetivo:</span>{" "}
+            <span className="font-semibold text-slate-700">Objetivo:</span>{" "}
             {objetivoLabel[card.camadas.objetivo]}
           </p>
         ) : null}
