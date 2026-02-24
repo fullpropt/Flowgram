@@ -34,25 +34,26 @@ interface SidebarBodyProps {
 
 function SidebarBody({ collapsed, pathname, onNavigate }: SidebarBodyProps) {
   return (
-    <div className="panel-soft flex h-full flex-col gap-4 p-4 md:gap-5 md:p-5">
-      <div className="rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,rgba(248,87,178,0.14),rgba(168,60,255,0.12),rgba(255,154,60,0.08))] p-3.5">
+    <div
+      className={cn(
+        "panel-soft flex h-full w-full flex-col gap-4 overflow-hidden",
+        collapsed ? "p-2 md:gap-3 md:p-2.5" : "p-4 md:gap-5 md:p-5",
+      )}
+    >
+      <div
+        className={cn(
+          "rounded-2xl border border-[var(--border)] bg-[linear-gradient(145deg,rgba(248,87,178,0.14),rgba(168,60,255,0.12),rgba(255,154,60,0.08))] p-3.5",
+          collapsed && "p-2.5",
+        )}
+      >
         <div className={cn("mb-2 flex items-center gap-2", collapsed && "mb-0 justify-center")}>
           <div className="rounded-lg border border-[#5f3a84] bg-[rgba(28,16,47,0.9)] p-2 shadow-[0_8px_20px_rgba(5,3,10,0.5)]">
             <Sparkles className="h-4 w-4 text-[var(--primary)]" />
           </div>
           <p className={cn("text-sm font-bold text-[var(--foreground)]", collapsed && "hidden")}>
-            Flowgram
+            Flowgram Lab
           </p>
         </div>
-        <p
-          className={cn(
-            "text-xs leading-relaxed text-[var(--muted)]",
-            collapsed && "hidden",
-          )}
-        >
-          Planejador visual para organizar ideias, estruturar pilares e manter o
-          calendario de conteudo sempre atualizado.
-        </p>
       </div>
 
       <nav className="grid gap-2">
@@ -63,7 +64,7 @@ function SidebarBody({ collapsed, pathname, onNavigate }: SidebarBodyProps) {
             <Link
               className={cn(
                 "group rounded-xl border px-3.5 py-3 transition",
-                collapsed && "px-2.5",
+                collapsed && "px-2 py-2.5",
                 isActive
                   ? "border-[#8a54bc] bg-[rgba(31,18,52,0.9)] shadow-[0_10px_24px_rgba(3,2,7,0.45)]"
                   : "border-transparent hover:border-[#4b326c] hover:bg-[rgba(24,14,41,0.78)]",
@@ -150,9 +151,9 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "hidden px-3 py-3 md:sticky md:top-0 md:block md:h-screen md:px-5 md:py-5",
+          "hidden overflow-hidden py-3 md:sticky md:top-0 md:block md:h-screen md:py-5",
           "transition-[width] duration-300",
-          collapsed ? "md:w-24" : "md:w-80",
+          collapsed ? "md:w-24 md:px-2" : "md:w-80 md:px-5",
         )}
       >
         <SidebarBody collapsed={collapsed} pathname={pathname} />

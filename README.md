@@ -1,4 +1,4 @@
-# Flowgram
+# Flowgram Lab
 
 Planejador visual de conteudo para Instagram com login e multiusuario.
 

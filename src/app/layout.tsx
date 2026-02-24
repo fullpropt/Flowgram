@@ -13,7 +13,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowgram",
+  title: "Flowgram Lab",
   description: "Planejador visual de conteudo para Instagram.",
 };
 

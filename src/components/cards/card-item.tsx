@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Copy, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatoLabel, objetivoLabel, pilarLabel, statusLabel } from "@/lib/constants";
+import { formatoLabel, objetivoLabel, statusLabel } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { IdeaCard } from "@/types/models";
 
@@ -44,6 +44,7 @@ export function CardItem({
 }: CardItemProps) {
   const canCollapse = collapsible && !compact;
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const showExpandedDetails = !canCollapse || isExpanded;
 
   return (
     <article
@@ -67,11 +68,11 @@ export function CardItem({
       <div className="mb-3 mt-1 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-bold text-[var(--foreground)]">{card.titulo}</h3>
-          {card.descricao && !compact ? (
+          {card.descricao && !compact && showExpandedDetails ? (
             <p
               className={cn(
                 "mt-1 text-xs leading-relaxed text-[var(--muted)]",
-                isExpanded ? "line-clamp-4" : "line-clamp-2",
+                canCollapse ? "line-clamp-4" : "line-clamp-2",
               )}
             >
               {card.descricao}
@@ -108,29 +109,27 @@ export function CardItem({
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        {card.pilar ? <Badge>{pilarLabel[card.pilar]}</Badge> : null}
+      <div className={cn("flex flex-wrap gap-2", showExpandedDetails && "mb-3")}>
         <Badge className="border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]">
           {statusLabel[card.status]}
         </Badge>
+        {card.camadas.formato ? (
+          <Badge className="border-[#4e3a73] bg-[rgba(88,58,133,0.14)] text-[#d9c8fb]">
+            {formatoLabel[card.camadas.formato]}
+          </Badge>
+        ) : null}
       </div>
 
       <div
         className={cn(
           "space-y-2 text-xs text-[#ccbde7]",
-          canCollapse && !isExpanded && "hidden",
+          !showExpandedDetails && "hidden",
         )}
       >
         {card.camadas.macroTema ? (
           <p className="line-clamp-1">
             <span className="font-semibold text-[#f3e9ff]">Macro tema:</span>{" "}
             {card.camadas.macroTema}
-          </p>
-        ) : null}
-        {card.camadas.formato ? (
-          <p>
-            <span className="font-semibold text-[#f3e9ff]">Formato:</span>{" "}
-            {formatoLabel[card.camadas.formato]}
           </p>
         ) : null}
         {card.camadas.objetivo ? (
@@ -140,10 +139,6 @@ export function CardItem({
           </p>
         ) : null}
       </div>
-
-      {canCollapse && !isExpanded ? (
-        <p className="mt-1 text-[11px] font-medium text-[#bca6de]">Toque na seta para ver detalhes</p>
-      ) : null}
     </article>
   );
 }

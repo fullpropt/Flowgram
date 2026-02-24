@@ -79,7 +79,7 @@ export function AuthForm() {
   return (
     <div className="panel mx-auto w-full max-w-md p-6 md:p-7">
       <div className="mb-5 space-y-2 text-center">
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Flowgram</h1>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">Flowgram Lab</h1>
         <p className="text-sm text-[var(--muted)]">
           Planejador visual de conteudo para Instagram
         </p>

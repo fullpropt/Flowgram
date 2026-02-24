@@ -11,7 +11,7 @@ import { useAppStore } from "@/store/app-store";
 const routeCopy: Record<string, { title: string; subtitle: string }> = {
   ideas: {
     title: "Banco de Ideias",
-    subtitle: "Gerencie ideias com filtros rapidos e edicao detalhada.",
+    subtitle: "Gerencie, filtre e organize ideias em um unico lugar.",
   },
   organize: {
     title: "Organizar",
@@ -48,7 +48,7 @@ export function Header({
       <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-            Flowgram
+            Flowgram Lab
           </p>
           <h1 className="text-lg font-bold text-[var(--foreground)]">{routeData.title}</h1>
           <p className="hidden text-sm text-[var(--muted)] md:block">{routeData.subtitle}</p>
