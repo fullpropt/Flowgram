@@ -53,6 +53,7 @@ export function CalendarView() {
   const calendarPosts = useAppStore((state) => state.calendarPosts);
   const addCalendarPost = useAppStore((state) => state.addCalendarPost);
   const updateCalendarPost = useAppStore((state) => state.updateCalendarPost);
+  const deleteCalendarPost = useAppStore((state) => state.deleteCalendarPost);
   const markCardStatus = useAppStore((state) => state.markCardStatus);
 
   const [currentView, setCurrentView] = useState<View>("month");
@@ -239,6 +240,15 @@ export function CalendarView() {
               </div>
 
               <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  onClick={() => {
+                    deleteCalendarPost(selectedPost.id);
+                    setSelectedPostId(null);
+                  }}
+                  variant="danger"
+                >
+                  Remover post
+                </Button>
                 <Button
                   onClick={() => {
                     updateCalendarPost(selectedPost.id, { observacoes: notesDraft });

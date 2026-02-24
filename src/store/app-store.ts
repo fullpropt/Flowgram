@@ -244,9 +244,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   deleteCalendarPost: (id) => {
     set((state) => {
+      const postToDelete = state.calendarPosts.find((post) => post.id === id);
       const calendarPosts = state.calendarPosts.filter((post) => post.id !== id);
-      void persistState(state.cards, calendarPosts);
-      return { calendarPosts };
+      const cards = state.cards.map((card) => {
+        if (card.id !== postToDelete?.ideaCardId) return card;
+
+        const stillScheduled = calendarPosts.some(
+          (post) => post.ideaCardId === card.id,
+        );
+        if (stillScheduled || card.status !== "Agendado") return card;
+
+        return { ...card, status: "Criado" as const, updatedAt: nowIso() };
+      });
+
+      void persistState(cards, calendarPosts);
+      return { cards, calendarPosts };
     });
   },
   generateWeekSuggestions: (_, includeConstrucao) => {
