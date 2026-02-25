@@ -806,25 +806,63 @@ export function PostStudio() {
       return;
     }
 
-    const defaultBrandLogoCss = `
+    const brandLogoCssRule = `
 .brand-logo {
   display: block;
-  width: auto;
-  max-width: 176px;
-  max-height: 56px;
-  object-fit: contain;
+  width: 180px;
+  height: 56px;
+  object-fit: cover;
+  object-position: center;
   flex-shrink: 0;
 }`;
+    const headerLogoDotHideCssRule = `.post__header > .brand-logo + .post__badge-dot {
+  display: none;
+}`;
 
-    const cssNeedsBrandLogoRule = !/\.brand-logo\b/.test(css);
-    if (cssNeedsBrandLogoRule) {
-      setCss((currentCss) => `${currentCss.trim()}\n\n${defaultBrandLogoCss}\n`);
+    const brandLogoRuleRegex = /\.brand-logo\s*\{[\s\S]*?\}/;
+
+    const cssHasBrandLogoRule = /\.brand-logo\b/.test(css);
+    const cssHasHeaderDotHideRule = /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(css);
+    const cssLooksLikeLegacyBrandLogoRule =
+      cssHasBrandLogoRule &&
+      /max-width:\s*176px/.test(css) &&
+      /max-height:\s*56px/.test(css) &&
+      /object-fit:\s*contain/.test(css);
+
+    const cssNeedsBrandLogoRule = !cssHasBrandLogoRule;
+    const cssNeedsHeaderDotHideRule = !cssHasHeaderDotHideRule;
+    const shouldUpgradeLegacyBrandLogoRule = cssLooksLikeLegacyBrandLogoRule;
+
+    if (cssNeedsBrandLogoRule || cssNeedsHeaderDotHideRule || shouldUpgradeLegacyBrandLogoRule) {
+      setCss((currentCss) => {
+        let nextCss = currentCss.trim();
+        const currentHasBrandLogoRule = /\.brand-logo\b/.test(nextCss);
+        const currentHasHeaderDotRule =
+          /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(nextCss);
+        const currentLooksLegacy =
+          currentHasBrandLogoRule &&
+          /max-width:\s*176px/.test(nextCss) &&
+          /max-height:\s*56px/.test(nextCss) &&
+          /object-fit:\s*contain/.test(nextCss);
+
+        if (!currentHasBrandLogoRule) {
+          nextCss = `${nextCss}\n\n${brandLogoCssRule}`;
+        } else if (currentLooksLegacy) {
+          nextCss = nextCss.replace(brandLogoRuleRegex, brandLogoCssRule);
+        }
+
+        if (!currentHasHeaderDotRule) {
+          nextCss = `${nextCss}\n\n${headerLogoDotHideCssRule}`;
+        }
+
+        return `${nextCss.trim()}\n`;
+      });
     }
 
     if (html.includes(STUDIO_LOGO_FIXED_URL)) {
       setSuccessMessage(
-        cssNeedsBrandLogoRule
-          ? "Logo ja existe no HTML. CSS padrao da logo foi adicionado."
+        cssNeedsBrandLogoRule || cssNeedsHeaderDotHideRule || shouldUpgradeLegacyBrandLogoRule
+          ? "Logo ja existe no HTML. CSS da logo foi ajustado."
           : "O HTML atual ja referencia a logo padrao.",
       );
       return;

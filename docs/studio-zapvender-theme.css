@@ -81,6 +81,19 @@
   gap: 12px;
 }
 
+.brand-logo {
+  display: block;
+  width: 180px;
+  height: 56px;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+}
+
+.post__header > .brand-logo + .post__badge-dot {
+  display: none;
+}
+
 .post__badge-dot {
   width: 16px;
   height: 16px;
