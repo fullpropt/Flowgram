@@ -37,6 +37,7 @@ export function CardPreviewModal({
   extraActions,
 }: CardPreviewModalProps) {
   const groupColors = useAppStore((state) => state.taxonomyConfig.groupColors);
+  const isPublished = card?.status === "Publicado";
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +92,13 @@ export function CardPreviewModal({
             <div className="space-y-5 p-5 md:p-6">
               <DialogHeader className="space-y-2 text-left">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]">
+                  <Badge
+                    className={
+                      isPublished
+                        ? "border-[#2f7f67] bg-[rgba(60,194,152,0.16)] text-[#b9ffe6]"
+                        : "border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]"
+                    }
+                  >
                     {statusLabel[card.status]}
                   </Badge>
                   {canal ? (

@@ -24,6 +24,7 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   allDay?: boolean;
+  published?: boolean;
   resource: CalendarPost;
 }
 
@@ -62,6 +63,12 @@ function CalendarEventContent({
 
   return (
     <div className="flex w-full items-center gap-1">
+      {event.published ? (
+        <span
+          className="inline-flex h-2 w-2 shrink-0 rounded-full bg-[#0f7a5f] shadow-[0_0_10px_rgba(73,244,182,0.65)]"
+          title="Publicado"
+        />
+      ) : null}
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[rgba(18,10,31,0.22)]">
         <CanalSymbol canal={canal} className="text-[#160a1f]" />
       </span>
@@ -108,6 +115,10 @@ export function CalendarView() {
   } | null>(null);
 
   const draggedCard = cards.find((card) => card.id === draggedCardId);
+  const cardById = useMemo(
+    () => new Map(cards.map((card) => [card.id, card])),
+    [cards],
+  );
 
   const events = useMemo<CalendarEvent[]>(
     () =>
@@ -117,9 +128,10 @@ export function CalendarView() {
         start: new Date(post.dataInicio),
         end: singleDayEventEnd(post.dataInicio),
         allDay: false,
+        published: post.ideaCardId ? cardById.get(post.ideaCardId)?.status === "Publicado" : false,
         resource: post,
       })),
-    [calendarPosts],
+    [calendarPosts, cardById],
   );
 
   const previewCard = useMemo(
@@ -279,6 +291,19 @@ export function CalendarView() {
                 : (null as unknown as CalendarEvent)
             }
             endAccessor="end"
+            eventPropGetter={(event) => {
+              if (!event.published) return {};
+
+              return {
+                style: {
+                  background:
+                    "linear-gradient(135deg, rgba(65, 215, 163, 0.95), rgba(54, 176, 155, 0.95), rgba(74, 228, 219, 0.92))",
+                  color: "#071713",
+                  boxShadow: "0 6px 16px rgba(52, 205, 162, 0.34)",
+                  border: "1px solid rgba(171, 255, 229, 0.45)",
+                },
+              };
+            }}
             events={events}
             localizer={localizer}
             messages={{

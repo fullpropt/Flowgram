@@ -23,24 +23,48 @@ const navigationItems = [
     label: "Banco de Ideias",
     description: "Capture e refine temas",
     icon: Lightbulb,
+    accentStripe: "bg-gradient-to-b from-[#ff6b8f] to-[#ff925a]",
+    activeBg:
+      "bg-[linear-gradient(145deg,rgba(255,107,143,0.14),rgba(255,146,90,0.08),rgba(31,18,52,0.92))]",
+    iconIdle: "border-[#5f3d64] bg-[rgba(42,22,39,0.82)] text-[#ffb9cb]",
+    iconActive: "border-[#8f5371] bg-[rgba(255,107,143,0.14)] text-[#ffd6e0]",
+    titleActive: "text-[#ffe0e9]",
   },
   {
     href: "/calendar",
     label: "Calendario",
     description: "Planeje a publicacao",
     icon: CalendarDays,
+    accentStripe: "bg-gradient-to-b from-[#59c9ff] to-[#52f1ff]",
+    activeBg:
+      "bg-[linear-gradient(145deg,rgba(89,201,255,0.14),rgba(82,241,255,0.08),rgba(31,18,52,0.92))]",
+    iconIdle: "border-[#34546d] bg-[rgba(18,30,45,0.82)] text-[#aceaff]",
+    iconActive: "border-[#4f7b9d] bg-[rgba(89,201,255,0.14)] text-[#d9fbff]",
+    titleActive: "text-[#ddf8ff]",
   },
   {
     href: "/trash",
     label: "Lixeira",
     description: "Recupere cards excluidos",
     icon: Trash2,
+    accentStripe: "bg-gradient-to-b from-[#ffc85a] to-[#ff8d60]",
+    activeBg:
+      "bg-[linear-gradient(145deg,rgba(255,200,90,0.12),rgba(255,141,96,0.08),rgba(31,18,52,0.92))]",
+    iconIdle: "border-[#68493d] bg-[rgba(43,26,22,0.82)] text-[#ffd4a2]",
+    iconActive: "border-[#936451] bg-[rgba(255,200,90,0.14)] text-[#ffe8c5]",
+    titleActive: "text-[#ffebd2]",
   },
   {
     href: "/settings",
     label: "Configuracoes Lab",
     description: "Grupos, objetivos e tags",
     icon: SlidersHorizontal,
+    accentStripe: "bg-gradient-to-b from-[#f857b2] to-[#a83cff]",
+    activeBg:
+      "bg-[linear-gradient(145deg,rgba(248,87,178,0.14),rgba(168,60,255,0.1),rgba(31,18,52,0.92))]",
+    iconIdle: "border-[#5a356d] bg-[rgba(37,21,49,0.82)] text-[#e7bbff]",
+    iconActive: "border-[#7c49a0] bg-[rgba(248,87,178,0.14)] text-[#ffd7fb]",
+    titleActive: "text-[#ffdaf8]",
   },
 ];
 
@@ -104,10 +128,10 @@ function SidebarBody({
           return (
             <Link
               className={cn(
-                "group rounded-xl border px-3.5 py-3 transition",
-                collapsed && "px-2 py-2.5",
+                "group relative overflow-hidden rounded-xl border px-3.5 py-3 transition",
+                collapsed ? "px-2 py-2.5" : "pl-4",
                 isActive
-                  ? "border-[#8a54bc] bg-[rgba(31,18,52,0.9)] shadow-[0_10px_24px_rgba(3,2,7,0.45)]"
+                  ? "border-[#8a54bc] shadow-[0_10px_24px_rgba(3,2,7,0.45)]"
                   : "border-transparent hover:border-[#4b326c] hover:bg-[rgba(24,14,41,0.78)]",
               )}
               href={item.href}
@@ -115,13 +139,29 @@ function SidebarBody({
               onClick={onNavigate}
               title={item.label}
             >
+              <span
+                className={cn(
+                  "absolute inset-0 pointer-events-none opacity-0 transition",
+                  item.activeBg,
+                  isActive ? "opacity-100" : "group-hover:opacity-80",
+                )}
+              />
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute bottom-2 left-1.5 top-2 w-[3px] rounded-full opacity-60 transition",
+                  item.accentStripe,
+                  isActive ? "opacity-100 shadow-[0_0_18px_rgba(255,255,255,0.08)]" : "group-hover:opacity-90",
+                  collapsed && "left-1 top-1.5 bottom-1.5",
+                )}
+              />
               <div className={cn("flex items-start gap-3", collapsed && "justify-center")}>
                 <div
                   className={cn(
-                    "rounded-lg border p-2",
+                    "relative rounded-lg border p-2 transition",
                     isActive
-                      ? "border-[#66438c] bg-[rgba(248,87,178,0.12)] text-[#ffb5f3]"
-                      : "border-[#3a2a57] bg-[rgba(21,13,35,0.88)] text-[#bba5dd] group-hover:text-[#dcc9ff]",
+                      ? item.iconActive
+                      : cn(item.iconIdle, "group-hover:brightness-110"),
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -129,8 +169,8 @@ function SidebarBody({
                 <div className={cn("min-w-0", collapsed && "hidden")}>
                   <p
                     className={cn(
-                      "text-sm font-semibold",
-                      isActive ? "text-[#ffd2f4]" : "text-[#d8caef]",
+                      "text-sm font-semibold transition-colors",
+                      isActive ? item.titleActive : "text-[#d8caef]",
                     )}
                   >
                     {item.label}

@@ -40,6 +40,7 @@ export function CardItem({
   onDragStart,
 }: CardItemProps) {
   const groupColors = useAppStore((state) => state.taxonomyConfig.groupColors);
+  const isPublished = card.status === "Publicado";
   const canCollapse = collapsible && !compact;
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const showExpandedDetails = !canCollapse || isExpanded;
@@ -48,6 +49,8 @@ export function CardItem({
     <article
       className={cn(
         "group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[rgba(19,12,36,0.82)] p-4 shadow-[0_10px_24px_rgba(5,3,10,0.5)] transition duration-200 hover:-translate-y-[2px] hover:border-[#6a3d93] hover:shadow-[0_16px_34px_rgba(5,3,10,0.68)]",
+        isPublished &&
+          "border-[#3f876f] bg-[rgba(16,22,27,0.76)] shadow-[0_10px_24px_rgba(5,3,10,0.5),0_0_0_1px_rgba(104,255,196,0.08)_inset] hover:border-[#58cfa8]",
         className,
       )}
       draggable={draggable}
@@ -117,7 +120,13 @@ export function CardItem({
       ) : null}
 
       <div className={cn("flex flex-wrap gap-2", showExpandedDetails && "mb-3", !showExpandedDetails && "mb-0")}>
-        <Badge className="border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]">
+        <Badge
+          className={
+            isPublished
+              ? "border-[#2f7f67] bg-[rgba(60,194,152,0.16)] text-[#b9ffe6]"
+              : "border-[#6b448f] bg-[rgba(248,87,178,0.14)] text-[#ffd2f4]"
+          }
+        >
           {statusLabel[card.status]}
         </Badge>
         {card.camadas.formato ? (
