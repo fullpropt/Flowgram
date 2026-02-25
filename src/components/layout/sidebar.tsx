@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canAccessStudio } from "@/lib/feature-access";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -53,6 +54,19 @@ const navigationItems = [
     iconActive: "border-[#7c49a0] bg-[rgba(248,87,178,0.14)] text-[#ffd7fb]",
     titleActive: "text-[#ffdaf8]",
   },
+  {
+    href: "/studio",
+    label: "Studio",
+    description: "Posts em HTML/CSS",
+    icon: Sparkles,
+    requiresStudioAccess: true,
+    accentStripe: "bg-gradient-to-b from-[#8ef7d5] to-[#43d2ff]",
+    activeBg:
+      "bg-[linear-gradient(145deg,rgba(142,247,213,0.12),rgba(67,210,255,0.08),rgba(31,18,52,0.92))]",
+    iconIdle: "border-[#35586a] bg-[rgba(20,31,40,0.82)] text-[#b8fbef]",
+    iconActive: "border-[#4b8298] bg-[rgba(142,247,213,0.14)] text-[#d8fffa]",
+    titleActive: "text-[#e2fffb]",
+  },
 ];
 
 interface SidebarProps {
@@ -65,6 +79,7 @@ interface SidebarBodyProps {
   collapsed: boolean;
   pathname: string;
   accountName: string;
+  accountEmail?: string;
   onOpenSettings: () => void;
   onSignOut: () => void;
   onNavigate?: () => void;
@@ -74,6 +89,7 @@ function SidebarBody({
   collapsed,
   pathname,
   accountName,
+  accountEmail,
   onOpenSettings,
   onSignOut,
   onNavigate,
@@ -84,6 +100,14 @@ function SidebarBody({
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [accountName]);
+
+  const visibleNavigationItems = useMemo(
+    () =>
+      navigationItems.filter((item) =>
+        item.requiresStudioAccess ? canAccessStudio(accountEmail) : true,
+      ),
+    [accountEmail],
+  );
 
   return (
     <div
@@ -109,7 +133,7 @@ function SidebarBody({
       </div>
 
       <nav className="grid gap-2">
-        {navigationItems.map((item) => {
+        {visibleNavigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -232,6 +256,7 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [accountName, setAccountName] = useState("Conta");
+  const [accountEmail, setAccountEmail] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -243,7 +268,10 @@ export function Sidebar({
         session?.user?.email?.trim() ||
         "Conta";
 
-      if (active) setAccountName(nextName);
+      if (active) {
+        setAccountName(nextName);
+        setAccountEmail(session?.user?.email?.trim() || undefined);
+      }
     }
 
     void loadSessionName();
@@ -273,6 +301,7 @@ export function Sidebar({
         )}
       >
         <SidebarBody
+          accountEmail={accountEmail}
           accountName={accountName}
           collapsed={false}
           onNavigate={onCloseMobile}
@@ -290,6 +319,7 @@ export function Sidebar({
         )}
       >
         <SidebarBody
+          accountEmail={accountEmail}
           accountName={accountName}
           collapsed={collapsed}
           onOpenSettings={() => router.push("/account-settings")}

@@ -20,6 +20,10 @@ const routeCopy: Record<string, { title: string; subtitle: string }> = {
     title: "Calendario",
     subtitle: "Visual mensal e semanal para acompanhar agendamentos.",
   },
+  studio: {
+    title: "Studio",
+    subtitle: "Crie posts em HTML/CSS e exporte imagens para o feed.",
+  },
   trash: {
     title: "Lixeira",
     subtitle: "Restaure cards excluidos dentro da janela de 7 dias.",
@@ -50,6 +54,7 @@ export function Header({
 
   const routeData = useMemo(() => {
     if (pathname.includes("/account-settings")) return routeCopy.accountSettings;
+    if (pathname.includes("/studio")) return routeCopy.studio;
     if (pathname.includes("/settings")) return routeCopy.labSettings;
     if (pathname.includes("/trash")) return routeCopy.trash;
     if (pathname.includes("/organize")) return routeCopy.organize;
