@@ -1,0 +1,23 @@
+# Keep Railway snapshots lean (CLI `railway up`)
+node_modules
+.next
+.git
+tmp
+docs
+coverage
+storage
+out
+build
+
+# Local / debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+tsconfig.tsbuildinfo
+
+# Env files (Railway should use dashboard vars)
+.env
+.env.*
+
