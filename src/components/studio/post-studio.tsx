@@ -1,10 +1,9 @@
 ﻿"use client";
 
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Download, FolderOpen, Pencil, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Download, FolderOpen, Pencil, Plus, RotateCcw, Save, Trash2, Upload } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -604,6 +603,8 @@ export function PostStudio() {
   const [logoUrl, setLogoUrl] = useState(STUDIO_LOGO_FIXED_URL);
   const [logoSnippet, setLogoSnippet] = useState(`<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`);
   const [logoRenderNonce, setLogoRenderNonce] = useState(0);
+  const logoFileInputId = useId();
+  const referencesFileInputId = useId();
   const exportRef = useRef<HTMLDivElement>(null);
 
   const preset = STUDIO_PRESETS.find((item) => item.key === presetKey) ?? STUDIO_PRESETS[0]!;
@@ -1221,7 +1222,7 @@ export function PostStudio() {
             </div>
           </div>
 
-          <div className="mb-4 grid gap-3 xl:grid-cols-2">
+          <div className="mb-4 grid gap-3">
             <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
               <div className="mb-2 flex items-center gap-2">
                 <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
@@ -1231,25 +1232,50 @@ export function PostStudio() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Logo da marca
                   </p>
-                  <p className="text-[11px] text-[var(--muted)]">
-                    URL fixa para usar no HTML: <code>{logoUrl}</code>
-                  </p>
+                  <p className="text-[11px] text-[var(--muted)]">URL fixa (padrao) para qualquer HTML gerado:</p>
+                  <code className="mt-1 block break-all rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(8,6,14,0.42)] px-2 py-1 text-[11px] text-[var(--foreground)]">
+                    {logoUrl}
+                  </code>
                 </div>
               </div>
 
               <div className="grid gap-3">
-                <Input
+                <input
                   accept="image/*,.svg"
+                  className="sr-only"
                   disabled={isUploadingLogo}
+                  id={logoFileInputId}
                   onChange={handleLogoFileChange}
                   type="file"
                 />
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[rgba(249,87,192,0.24)] bg-[linear-gradient(180deg,rgba(249,87,192,0.05),rgba(168,60,255,0.02))] p-3 transition hover:border-[rgba(249,87,192,0.38)] hover:bg-[rgba(255,255,255,0.02)]",
+                    isUploadingLogo && "pointer-events-none cursor-not-allowed opacity-70",
+                  )}
+                  htmlFor={logoFileInputId}
+                >
+                  <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-2 text-[var(--muted-soft)]">
+                    <Upload className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {isUploadingLogo ? "Enviando logo..." : "Enviar logo da marca"}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      PNG, JPG, SVG, WEBP ou GIF. A URL continua a mesma.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2 py-1 text-[11px] font-semibold text-[var(--foreground)]">
+                    Escolher
+                  </span>
+                </label>
 
                 <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.45)] p-2">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Snippet pronto
                   </p>
-                  <code className="block overflow-x-auto whitespace-nowrap text-[11px] text-[var(--foreground)]">
+                  <code className="block break-all whitespace-pre-wrap text-[11px] leading-4 text-[var(--foreground)]">
                     {logoSnippet}
                   </code>
                 </div>
@@ -1289,14 +1315,11 @@ export function PostStudio() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-xs text-[var(--muted)]">
-                    Nenhuma logo enviada ainda. Apos o upload, use sempre <code>{logoUrl}</code> no HTML.
+                  <p className="text-xs leading-relaxed text-[var(--muted)]">
+                    Nenhuma logo enviada ainda. Depois do upload, use sempre{" "}
+                    <code className="break-all text-[var(--foreground)]">{logoUrl}</code> no HTML.
                   </p>
                 )}
-
-                {isUploadingLogo ? (
-                  <p className="text-xs text-[var(--muted)]">Enviando logo...</p>
-                ) : null}
               </div>
             </div>
 
@@ -1316,29 +1339,55 @@ export function PostStudio() {
               </div>
 
               <div className="grid gap-3">
-                <Input
+                <input
+                  className="sr-only"
                   disabled={isUploadingReferences}
+                  id={referencesFileInputId}
                   multiple
                   onChange={handleReferenceFilesChange}
                   type="file"
                 />
+                <label
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-[rgba(96,165,250,0.22)] bg-[linear-gradient(180deg,rgba(59,130,246,0.04),rgba(255,255,255,0.01))] p-3 transition hover:border-[rgba(96,165,250,0.36)] hover:bg-[rgba(255,255,255,0.02)]",
+                    isUploadingReferences && "pointer-events-none cursor-not-allowed opacity-70",
+                  )}
+                  htmlFor={referencesFileInputId}
+                >
+                  <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-2 text-[var(--muted-soft)]">
+                    <Upload className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {isUploadingReferences ? "Enviando arquivos..." : "Adicionar arquivos de referencia"}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      Selecione varios arquivos (PDF, imagem, texto, etc.) para estudo visual.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2 py-1 text-[11px] font-semibold text-[var(--foreground)]">
+                    Selecionar
+                  </span>
+                </label>
 
                 <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.38)] p-2">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                       Arquivos enviados
                     </p>
-                    <p className="text-[11px] text-[var(--muted)]">{referenceAssets.length}</p>
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--foreground)]">
+                      {referenceAssets.length}
+                    </span>
                   </div>
 
                   {isLoadingAssets ? (
                     <p className="text-xs text-[var(--muted)]">Carregando arquivos...</p>
                   ) : referenceAssets.length === 0 ? (
-                    <p className="text-xs text-[var(--muted)]">
+                    <p className="text-xs leading-relaxed text-[var(--muted)]">
                       Ainda nao ha arquivos. Eles serao salvos localmente no servidor deste projeto.
                     </p>
                   ) : (
-                    <div className="max-h-48 space-y-2 overflow-auto pr-1">
+                    <div className="max-h-52 space-y-2 overflow-auto pr-1">
                       {referenceAssets.map((file) => (
                         <div
                           className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] p-2"
@@ -1352,7 +1401,7 @@ export function PostStudio() {
                               </p>
                             </div>
 
-                            <div className="flex items-center gap-1">
+                            <div className="flex shrink-0 items-center gap-1">
                               <a
                                 className="inline-flex h-8 items-center rounded-lg border border-[rgba(255,255,255,0.08)] px-2 text-xs text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.05)]"
                                 href={file.url}
@@ -1376,10 +1425,6 @@ export function PostStudio() {
                     </div>
                   )}
                 </div>
-
-                {isUploadingReferences ? (
-                  <p className="text-xs text-[var(--muted)]">Enviando arquivos de referencia...</p>
-                ) : null}
               </div>
             </div>
           </div>
