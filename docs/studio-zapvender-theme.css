@@ -1,0 +1,292 @@
+/* Flowgram Studio - ZapVender Theme (cole no campo CSS do Studio)
+ * Compatível com a estrutura neutra padrão (`post__*` classes).
+ * Dica: use junto com HTML estrutural (sem `style=""` inline).
+ */
+
+.post {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  color: #f8fbff;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(52, 211, 153, 0.24), transparent 44%),
+    radial-gradient(circle at 84% 12%, rgba(37, 211, 102, 0.18), transparent 36%),
+    radial-gradient(circle at 56% 34%, rgba(0, 0, 0, 0.34), transparent 60%),
+    linear-gradient(160deg, #071528 0%, #0a2133 55%, #0b1e2f 100%);
+}
+
+.post::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 60% 40%, rgba(0, 0, 0, 0.30), transparent 56%),
+    radial-gradient(circle at 80% 88%, rgba(34, 197, 94, 0.14), transparent 42%);
+  pointer-events: none;
+}
+
+.post::after {
+  content: "";
+  position: absolute;
+  right: -2%;
+  bottom: -1%;
+  width: 34%;
+  height: 24%;
+  background: linear-gradient(180deg, rgba(134, 239, 172, 0.12), rgba(134, 239, 172, 0.03));
+  clip-path: polygon(32% 0, 100% 0, 100% 100%, 0 100%, 0 72%);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.post__glow {
+  position: absolute;
+  width: 38%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.post__glow--a {
+  left: -8%;
+  top: -4%;
+  background: rgba(34, 197, 94, 0.28);
+}
+
+.post__glow--b {
+  right: -10%;
+  bottom: -8%;
+  background: rgba(59, 130, 246, 0.24);
+}
+
+.post__layer {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  padding: 56px 52px 46px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.post__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.post__badge-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #bdf854, #22c55e);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+  flex-shrink: 0;
+}
+
+.post__eyebrow {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(236, 253, 245, 0.94);
+  line-height: 1;
+}
+
+.post__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(187, 247, 208, 0.66);
+}
+
+.post__hero {
+  margin-top: 30px;
+}
+
+.post__title {
+  margin: 0;
+  font-size: 88px;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-weight: 800;
+  max-width: 92%;
+  color: #f8fbff;
+  text-wrap: balance;
+}
+
+.post__subtitle {
+  margin: 16px 0 0;
+  max-width: 88%;
+  font-size: 29px;
+  line-height: 1.14;
+  font-weight: 500;
+  color: rgba(219, 234, 254, 0.95);
+}
+
+.post__grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.post__panel {
+  border-radius: 20px;
+  min-height: 216px;
+  padding: 16px 16px 14px;
+  box-sizing: border-box;
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  background:
+    linear-gradient(180deg, rgba(34, 197, 94, 0.04), rgba(34, 197, 94, 0.01)),
+    rgba(8, 20, 40, 0.58);
+}
+
+.post__panel:nth-child(1) {
+  border-color: rgba(248, 113, 113, 0.20);
+  background:
+    linear-gradient(180deg, rgba(248, 113, 113, 0.07), rgba(248, 113, 113, 0.02)),
+    rgba(8, 20, 40, 0.56);
+}
+
+.post__panel:nth-child(2) {
+  border-color: rgba(34, 197, 94, 0.22);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(34, 197, 94, 0.10), transparent 46%),
+    rgba(8, 20, 40, 0.62);
+}
+
+.post__panel-label {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(191, 219, 254, 0.74);
+}
+
+.post__panel:nth-child(1) .post__panel-label {
+  color: #fecaca;
+}
+
+.post__panel:nth-child(2) .post__panel-label {
+  color: #bbf7d0;
+}
+
+.post__panel-title {
+  margin: 0 0 9px;
+  font-size: 29px;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.post__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.post__list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 18px;
+  line-height: 1.08;
+  font-weight: 500;
+  color: #dbeafe;
+}
+
+.post__panel:nth-child(2) .post__list li {
+  color: #d1fae5;
+}
+
+.post__list li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  position: absolute;
+  left: 0;
+  top: 9px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.post__panel:nth-child(1) .post__list li::before {
+  background: rgba(248, 113, 113, 0.90);
+}
+
+.post__panel:nth-child(2) .post__list li::before {
+  background: rgba(34, 197, 94, 0.95);
+}
+
+.post__footer {
+  margin-top: auto;
+}
+
+.post__hook {
+  margin: 0;
+  font-size: 58px;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+  color: #ffffff;
+  max-width: 78%;
+  text-wrap: balance;
+}
+
+.post__cta {
+  margin-top: 10px;
+  font-size: 24px;
+  line-height: 1.08;
+  font-weight: 600;
+  color: #d1fae5;
+}
+
+@media (max-width: 900px) {
+  .post__layer {
+    padding: 34px;
+  }
+
+  .post__title {
+    font-size: 58px;
+  }
+
+  .post__subtitle {
+    font-size: 20px;
+    max-width: 100%;
+  }
+
+  .post__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post__panel-title {
+    font-size: 24px;
+  }
+
+  .post__list li {
+    font-size: 16px;
+  }
+
+  .post__hook {
+    font-size: 42px;
+    max-width: 100%;
+  }
+
+  .post__cta {
+    font-size: 20px;
+  }
+}

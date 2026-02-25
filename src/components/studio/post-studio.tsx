@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FolderOpen, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
@@ -32,90 +32,281 @@ const STUDIO_PRESETS: StudioPreset[] = [
 const STUDIO_HTML_LIBRARY_KEY = "flowgram-lab:studio:html-library:v1";
 const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
 
-const DEFAULT_HTML = `<div class="card">
-  <div class="eyebrow">FLOWGRAM LAB</div>
-  <h1>Headline forte em 2 linhas para o post</h1>
-  <p>Subtexto curto com promessa, contexto ou explicacao da ideia principal.</p>
-  <div class="footer">
-    <span class="pill">Grupo</span>
-    <span class="pill">Formato</span>
-  </div>
-</div>`;
+const DEFAULT_HTML = `<article class="post">
+  <div class="post__glow post__glow--a"></div>
+  <div class="post__glow post__glow--b"></div>
 
-const DEFAULT_CSS = `.card {
+  <div class="post__layer">
+    <header class="post__header">
+      <div class="post__badge-dot"></div>
+      <div>
+        <p class="post__eyebrow">Tema do Post</p>
+        <p class="post__meta">Estrutura visual neutra</p>
+      </div>
+    </header>
+
+    <section class="post__hero">
+      <h1 class="post__title">Headline forte em 2 linhas para o post</h1>
+      <p class="post__subtitle">Subtexto curto com promessa, contexto ou explicacao da ideia principal.</p>
+    </section>
+
+    <section class="post__grid">
+      <div class="post__panel">
+        <p class="post__panel-label">Ponto 1</p>
+        <h2 class="post__panel-title">Mensagem clara</h2>
+        <ul class="post__list">
+          <li>Texto curto e direto.</li>
+          <li>Foco no beneficio.</li>
+          <li>Leitura rapida no feed.</li>
+        </ul>
+      </div>
+
+      <div class="post__panel">
+        <p class="post__panel-label">Ponto 2</p>
+        <h2 class="post__panel-title">Composicao visual</h2>
+        <ul class="post__list">
+          <li>Hierarquia tipografica.</li>
+          <li>Espaco entre blocos.</li>
+          <li>Contraste de informacao.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="post__footer">
+      <p class="post__hook">Hook / CTA principal.</p>
+      <p class="post__cta">Complemento de acao ou reforco final.</p>
+    </footer>
+  </div>
+</article>`;
+
+const DEFAULT_CSS = `.post {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  padding: 72px;
-  background:
-    radial-gradient(circle at 10% 8%, rgba(255, 122, 168, 0.30), transparent 38%),
-    radial-gradient(circle at 90% 12%, rgba(100, 217, 255, 0.26), transparent 36%),
-    linear-gradient(165deg, #140b22 0%, #0f081c 48%, #15091f 100%);
-  color: #f5ecff;
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  border: 2px solid rgba(255,255,255,0.08);
-  border-radius: 48px;
   position: relative;
   overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(148, 163, 184, 0.12), transparent 40%),
+    radial-gradient(circle at 82% 14%, rgba(96, 165, 250, 0.10), transparent 36%),
+    linear-gradient(160deg, #101521 0%, #111827 52%, #0f172a 100%);
+  color: #f8fafc;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-.card::before {
-  content: "";
+.post__glow {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 2px;
-  background: linear-gradient(135deg, #ff6b8f, #a83cff, #ff9a3c);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.75;
+  width: 38%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.4;
   pointer-events: none;
 }
 
-.eyebrow {
-  font-size: 28px;
-  letter-spacing: 0.18em;
-  font-weight: 800;
-  color: #d5bdf8;
-  margin-bottom: 24px;
+.post__glow--a {
+  left: -8%;
+  top: -4%;
+  background: rgba(168, 85, 247, 0.35);
 }
 
-h1 {
+.post__glow--b {
+  right: -10%;
+  bottom: -8%;
+  background: rgba(59, 130, 246, 0.28);
+}
+
+.post__layer {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  padding: 56px 52px 46px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.post__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.post__badge-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e2e8f0, #94a3b8);
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.08);
+  flex-shrink: 0;
+}
+
+.post__eyebrow {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(241, 245, 249, 0.95);
+  line-height: 1;
+}
+
+.post__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.55);
+}
+
+.post__hero {
+  margin-top: 30px;
+}
+
+.post__title {
   margin: 0;
   font-size: 88px;
-  line-height: 1.04;
-  max-width: 90%;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-weight: 800;
+  max-width: 92%;
+  color: #f8fbff;
+  text-wrap: balance;
 }
 
-p {
-  margin: 28px 0 0;
-  max-width: 82%;
-  font-size: 34px;
-  line-height: 1.35;
-  color: rgba(235, 223, 255, 0.88);
+.post__subtitle {
+  margin: 16px 0 0;
+  max-width: 88%;
+  font-size: 29px;
+  line-height: 1.14;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.9);
 }
 
-.footer {
-  margin-top: 40px;
-  display: flex;
+.post__grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 14px;
-  flex-wrap: wrap;
 }
 
-.pill {
+.post__panel {
+  border-radius: 20px;
+  min-height: 216px;
+  padding: 16px 16px 14px;
+  box-sizing: border-box;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+    rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(3px);
+}
+
+.post__panel-label {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(191, 219, 254, 0.74);
+}
+
+.post__panel-title {
+  margin: 0 0 9px;
+  font-size: 29px;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.post__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.post__list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 18px;
+  line-height: 1.08;
+  font-weight: 500;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.post__list li::before {
+  content: "";
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
-  padding: 10px 18px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #f7e9ff;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(39, 24, 62, 0.78);
+  position: absolute;
+  left: 0;
+  top: 9px;
+  background: rgba(148, 163, 184, 0.8);
+}
+
+.post__footer {
+  margin-top: auto;
+}
+
+.post__hook {
+  margin: 0;
+  font-size: 58px;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+  color: #ffffff;
+  max-width: 82%;
+  text-wrap: balance;
+}
+
+.post__cta {
+  margin-top: 10px;
+  font-size: 24px;
+  line-height: 1.08;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.86);
+}
+
+@media (max-width: 900px) {
+  .post__layer {
+    padding: 34px;
+  }
+
+  .post__title {
+    font-size: 58px;
+  }
+
+  .post__subtitle {
+    font-size: 20px;
+    max-width: 100%;
+  }
+
+  .post__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post__panel-title {
+    font-size: 24px;
+  }
+
+  .post__list li {
+    font-size: 16px;
+  }
+
+  .post__hook {
+    font-size: 42px;
+    max-width: 100%;
+  }
+
+  .post__cta {
+    font-size: 20px;
+  }
 }`;
 
 function createLibraryItemId() {
@@ -159,8 +350,19 @@ function writeLibraryItems(storageKey: string, items: StudioLibraryItem[]) {
   window.localStorage.setItem(storageKey, JSON.stringify(items));
 }
 
-function sanitizeCode(input: string) {
+function stripScripts(input: string) {
   return input.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+}
+
+function sanitizeStructuralHtml(input: string) {
+  return stripScripts(input)
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+    .replace(/\son[a-z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\sstyle\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+}
+
+function sanitizeCssCode(input: string) {
+  return stripScripts(input).replace(/<\/?style[^>]*>/gi, "");
 }
 
 function scopeSelectorList(selectorList: string, rootSelector: string) {
@@ -284,8 +486,8 @@ function StudioCanvas({
   height: number;
   className?: string;
 }) {
-  const safeHtml = useMemo(() => sanitizeCode(html), [html]);
-  const safeCss = useMemo(() => sanitizeCode(css), [css]);
+  const safeHtml = useMemo(() => sanitizeStructuralHtml(html), [html]);
+  const safeCss = useMemo(() => sanitizeCssCode(css), [css]);
   const scopedCss = useMemo(() => scopeStudioCss(safeCss), [safeCss]);
 
   return (
@@ -520,7 +722,6 @@ export function PostStudio() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Estruturas (HTML)
                   </p>
-                  <p className="text-xs text-[var(--muted)]">Salve layouts para reutilizar depois.</p>
                 </div>
               </div>
 
@@ -536,7 +737,7 @@ export function PostStudio() {
                       const found = htmlLibrary.find((item) => item.id === nextId);
                       if (!found) return;
 
-                      setHtml(found.content);
+                      setHtml(sanitizeStructuralHtml(found.content));
                       setErrorMessage(null);
                       setSuccessMessage("Estrutura carregada.");
                     }}
@@ -563,10 +764,6 @@ export function PostStudio() {
                     <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
                   </Button>
                 </div>
-
-                <p className="text-xs text-[var(--muted)]">
-                  Selecionar carrega automaticamente. Use <span className="font-semibold text-[var(--foreground)]">+</span> para salvar uma nova estrutura com o HTML atual.
-                </p>
               </div>
             </div>
 
@@ -579,7 +776,6 @@ export function PostStudio() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Estilos (CSS)
                   </p>
-                  <p className="text-xs text-[var(--muted)]">Guarde seus temas e variações visuais.</p>
                 </div>
               </div>
 
@@ -622,10 +818,6 @@ export function PostStudio() {
                     <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
                   </Button>
                 </div>
-
-                <p className="text-xs text-[var(--muted)]">
-                  Selecionar carrega automaticamente. Use <span className="font-semibold text-[var(--foreground)]">+</span> para salvar um novo estilo com o CSS atual.
-                </p>
               </div>
             </div>
           </div>
@@ -633,11 +825,11 @@ export function PostStudio() {
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                HTML (sem JavaScript)
+                HTML (modo estrutural)
               </label>
               <Textarea
                 className="min-h-[340px] font-mono text-xs leading-5"
-                onChange={(event) => setHtml(event.target.value)}
+                onChange={(event) => setHtml(sanitizeStructuralHtml(event.target.value))}
                 spellCheck={false}
                 value={html}
               />
@@ -713,3 +905,4 @@ export function PostStudio() {
     </div>
   );
 }
+
