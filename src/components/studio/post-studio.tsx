@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FolderOpen, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Download, FolderOpen, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -324,15 +323,13 @@ export function PostStudio() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [htmlLibrary, setHtmlLibrary] = useState<StudioLibraryItem[]>([]);
   const [cssLibrary, setCssLibrary] = useState<StudioLibraryItem[]>([]);
-  const [htmlEntryName, setHtmlEntryName] = useState("");
-  const [cssEntryName, setCssEntryName] = useState("");
   const [selectedHtmlId, setSelectedHtmlId] = useState("");
   const [selectedCssId, setSelectedCssId] = useState("");
   const [librariesHydrated, setLibrariesHydrated] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const preset = STUDIO_PRESETS.find((item) => item.key === presetKey) ?? STUDIO_PRESETS[0]!;
-  const previewScale = Math.min(1, 380 / preset.width, 560 / preset.height);
+  const previewScale = Math.min(1, 520 / preset.width, 760 / preset.height);
   const previewWidth = Math.round(preset.width * previewScale);
   const previewHeight = Math.round(preset.height * previewScale);
 
@@ -359,25 +356,37 @@ export function PostStudio() {
     return () => window.clearTimeout(timer);
   }, [successMessage]);
 
-  function saveLibraryEntry(kind: "html" | "css") {
+  function promptAndSaveLibraryEntry(kind: "html" | "css") {
     setErrorMessage(null);
     setSuccessMessage(null);
 
     const content = kind === "html" ? html.trim() : css.trim();
-    const name = (kind === "html" ? htmlEntryName : cssEntryName).trim();
-
-    if (!name) {
-      setErrorMessage(`Informe um nome para ${kind === "html" ? "a estrutura" : "o estilo"}.`);
-      return;
-    }
 
     if (!content) {
       setErrorMessage(`Nao ha conteudo de ${kind === "html" ? "HTML" : "CSS"} para salvar.`);
       return;
     }
 
-    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
+    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
     const currentItems = kind === "html" ? htmlLibrary : cssLibrary;
+    const selectedItem = currentItems.find((item) => item.id === selectedId);
+    const defaultName = selectedItem
+      ? `${selectedItem.name} copia`
+      : kind === "html"
+        ? `Estrutura ${currentItems.length + 1}`
+        : `Estilo ${currentItems.length + 1}`;
+
+    const promptMessage = kind === "html" ? "Nome da estrutura HTML" : "Nome do estilo CSS";
+    const rawName = window.prompt(promptMessage, defaultName);
+    if (rawName === null) return;
+
+    const name = rawName.trim();
+    if (!name) {
+      setErrorMessage(`Informe um nome para ${kind === "html" ? "a estrutura" : "o estilo"}.`);
+      return;
+    }
+
+    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
     const selectItem = kind === "html" ? setSelectedHtmlId : setSelectedCssId;
 
     const existing = currentItems.find((item) => item.name.toLowerCase() === name.toLowerCase());
@@ -392,30 +401,6 @@ export function PostStudio() {
     setItems(nextItems);
     selectItem(updatedItem.id);
     setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} salvo com sucesso.`);
-  }
-
-  function loadSelectedLibraryEntry(kind: "html" | "css") {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
-    const items = kind === "html" ? htmlLibrary : cssLibrary;
-
-    const found = items.find((item) => item.id === selectedId);
-    if (!found) {
-      setErrorMessage(`Selecione ${kind === "html" ? "uma estrutura" : "um estilo"} para carregar.`);
-      return;
-    }
-
-    if (kind === "html") {
-      setHtml(found.content);
-      setHtmlEntryName(found.name);
-    } else {
-      setCss(found.content);
-      setCssEntryName(found.name);
-    }
-
-    setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} carregado.`);
   }
 
   function removeSelectedLibraryEntry(kind: "html" | "css") {
@@ -483,9 +468,9 @@ export function PostStudio() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="grid gap-1 self-end">
-              <span className="px-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 self-center rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] px-2 py-2">
+              <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                 Tamanho
               </span>
               <select
@@ -499,10 +484,10 @@ export function PostStudio() {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
             <Button
-              className="self-end"
+              className="self-center"
               onClick={() => {
                 setHtml(DEFAULT_HTML);
                 setCss(DEFAULT_CSS);
@@ -515,7 +500,7 @@ export function PostStudio() {
               Resetar template
             </Button>
 
-            <Button className="self-end" disabled={isDownloading} onClick={handleDownloadPng}>
+            <Button className="self-center" disabled={isDownloading} onClick={handleDownloadPng}>
               <Download className="h-4 w-4" />
               {isDownloading ? "Gerando..." : "Baixar PNG"}
             </Button>
@@ -523,7 +508,7 @@ export function PostStudio() {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_420px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_580px]">
         <section className="panel-soft p-4 md:p-5">
           <div className="mb-4 grid gap-3 xl:grid-cols-2">
             <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
@@ -543,7 +528,18 @@ export function PostStudio() {
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-                    onChange={(event) => setSelectedHtmlId(event.target.value)}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      setSelectedHtmlId(nextId);
+                      if (!nextId) return;
+
+                      const found = htmlLibrary.find((item) => item.id === nextId);
+                      if (!found) return;
+
+                      setHtml(found.content);
+                      setErrorMessage(null);
+                      setSuccessMessage("Estrutura carregada.");
+                    }}
                     value={selectedHtmlId}
                   >
                     <option value="">Selecione uma estrutura salva</option>
@@ -554,8 +550,13 @@ export function PostStudio() {
                     ))}
                   </select>
 
-                  <Button onClick={() => loadSelectedLibraryEntry("html")} size="sm" variant="outline">
-                    Carregar
+                  <Button
+                    onClick={() => promptAndSaveLibraryEntry("html")}
+                    size="icon"
+                    title="Salvar nova estrutura com o HTML atual"
+                    variant="secondary"
+                  >
+                    <Plus className="h-4 w-4" />
                   </Button>
 
                   <Button onClick={() => removeSelectedLibraryEntry("html")} size="sm" variant="ghost">
@@ -563,17 +564,9 @@ export function PostStudio() {
                   </Button>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                  <Input
-                    onChange={(event) => setHtmlEntryName(event.target.value)}
-                    placeholder="Nome da estrutura"
-                    value={htmlEntryName}
-                  />
-                  <Button onClick={() => saveLibraryEntry("html")} size="sm" variant="secondary">
-                    <Save className="h-4 w-4" />
-                    Salvar HTML
-                  </Button>
-                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  Selecionar carrega automaticamente. Use <span className="font-semibold text-[var(--foreground)]">+</span> para salvar uma nova estrutura com o HTML atual.
+                </p>
               </div>
             </div>
 
@@ -594,7 +587,18 @@ export function PostStudio() {
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-                    onChange={(event) => setSelectedCssId(event.target.value)}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      setSelectedCssId(nextId);
+                      if (!nextId) return;
+
+                      const found = cssLibrary.find((item) => item.id === nextId);
+                      if (!found) return;
+
+                      setCss(found.content);
+                      setErrorMessage(null);
+                      setSuccessMessage("Estilo carregado.");
+                    }}
                     value={selectedCssId}
                   >
                     <option value="">Selecione um estilo salvo</option>
@@ -605,8 +609,13 @@ export function PostStudio() {
                     ))}
                   </select>
 
-                  <Button onClick={() => loadSelectedLibraryEntry("css")} size="sm" variant="outline">
-                    Carregar
+                  <Button
+                    onClick={() => promptAndSaveLibraryEntry("css")}
+                    size="icon"
+                    title="Salvar novo estilo com o CSS atual"
+                    variant="secondary"
+                  >
+                    <Plus className="h-4 w-4" />
                   </Button>
 
                   <Button onClick={() => removeSelectedLibraryEntry("css")} size="sm" variant="ghost">
@@ -614,17 +623,9 @@ export function PostStudio() {
                   </Button>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                  <Input
-                    onChange={(event) => setCssEntryName(event.target.value)}
-                    placeholder="Nome do estilo"
-                    value={cssEntryName}
-                  />
-                  <Button onClick={() => saveLibraryEntry("css")} size="sm" variant="secondary">
-                    <Save className="h-4 w-4" />
-                    Salvar CSS
-                  </Button>
-                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  Selecionar carrega automaticamente. Use <span className="font-semibold text-[var(--foreground)]">+</span> para salvar um novo estilo com o CSS atual.
+                </p>
               </div>
             </div>
           </div>
@@ -668,7 +669,7 @@ export function PostStudio() {
           ) : null}
         </section>
 
-        <section className="panel-soft p-4">
+        <section className="panel-soft border-[rgba(148,163,184,0.16)] bg-[rgba(12,14,20,0.68)] p-4">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
@@ -680,9 +681,9 @@ export function PostStudio() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[var(--border)] bg-[rgba(13,9,22,0.9)] p-3">
+          <div className="rounded-2xl border border-[rgba(148,163,184,0.15)] bg-[linear-gradient(180deg,rgba(18,22,30,0.92),rgba(11,14,20,0.95))] p-4">
             <div
-              className="mx-auto overflow-hidden rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(9,7,15,0.92)] shadow-[0_20px_40px_rgba(0,0,0,0.35)]"
+              className="mx-auto overflow-hidden rounded-xl border border-[rgba(148,163,184,0.14)] bg-[linear-gradient(180deg,#11151d,#0c1016)] shadow-[0_24px_50px_rgba(0,0,0,0.42)]"
               style={{ width: previewWidth, height: previewHeight }}
             >
               <div
