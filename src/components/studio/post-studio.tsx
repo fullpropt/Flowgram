@@ -204,6 +204,7 @@ const DEFAULT_HTML_LAYERS: StudioHtmlLayers = {
   content: DEFAULT_HTML_CONTENT,
   overlay: DEFAULT_HTML_OVERLAY,
 };
+const DEFAULT_COMPOSITION_NAME = "Novo Post";
 
 const DEFAULT_CSS = `.post {
   width: 100%;
@@ -513,6 +514,35 @@ async function waitForNodeImages(node: HTMLElement) {
       });
     }),
   );
+}
+
+async function waitForDocumentFonts() {
+  if (typeof document === "undefined") return;
+  const fontsApi = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
+  if (!fontsApi?.ready) return;
+
+  try {
+    await fontsApi.ready;
+  } catch {
+    // ignore font readiness failures and continue export
+  }
+}
+
+function getPresetExportLabel(presetKey: StudioPresetKey) {
+  if (presetKey === "story") return "Story";
+  if (presetKey === "feedSquare") return "Quadrado";
+  return "Feed";
+}
+
+function sanitizeFileNameBase(input: string) {
+  const normalized = input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return normalized || "post";
 }
 
 function readLibraryItems(storageKey: string): StudioLibraryItem[] {
@@ -920,6 +950,8 @@ export function PostStudio() {
   );
   const [selectedCssId, setSelectedCssId] = useState("");
   const [selectedCompositionId, setSelectedCompositionId] = useState("");
+  const [compositionName, setCompositionName] = useState(DEFAULT_COMPOSITION_NAME);
+  const [isEditingCompositionName, setIsEditingCompositionName] = useState(false);
   const [activeModalKind, setActiveModalKind] = useState<StudioModalKind | null>(null);
   const [librariesHydrated, setLibrariesHydrated] = useState(false);
   const [logoAsset, setLogoAsset] = useState<StudioLogoAsset | null>(null);
@@ -937,7 +969,7 @@ export function PostStudio() {
   });
   const logoFileInputId = useId();
   const referencesFileInputId = useId();
-  const exportRef = useRef<HTMLDivElement>(null);
+  const previewCanvasExportRef = useRef<HTMLDivElement>(null);
 
   const preset = STUDIO_PRESETS.find((item) => item.key === presetKey) ?? STUDIO_PRESETS[0]!;
   const previewScale = Math.min(1, 520 / preset.width, 760 / preset.height);
@@ -1406,9 +1438,7 @@ export function PostStudio() {
   }
 
   function getSelectedCompositionName() {
-    if (!selectedCompositionId) return "Sem conjunto";
-    const found = compositionLibrary.find((item) => item.id === selectedCompositionId);
-    return found?.name ?? "Conjunto ausente";
+    return compositionName.trim() || DEFAULT_COMPOSITION_NAME;
   }
 
   function openLibraryModal(kind: StudioModalKind) {
@@ -1427,6 +1457,8 @@ export function PostStudio() {
 
     const composition = compositionLibrary.find((item) => item.id === nextId);
     if (!composition) return;
+    setCompositionName(composition.name);
+    setIsEditingCompositionName(false);
 
     const nextSelectedLayerIds = cloneHtmlLayerSelections(composition.layerIds);
     const missingLayers: string[] = [];
@@ -1463,6 +1495,57 @@ export function PostStudio() {
     setSuccessMessage("Conjunto carregado.");
   }
 
+  function saveCurrentCompositionCombination({ forceNew = false }: { forceNew?: boolean } = {}) {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const hasAnyLayerSelected = Object.values(selectedHtmlLayerIds).some((value) => value.trim().length > 0);
+    if (!hasAnyLayerSelected) {
+      setErrorMessage("Selecione pelo menos um template HTML para salvar o conjunto.");
+      return;
+    }
+
+    const nextName = (compositionName.trim() || DEFAULT_COMPOSITION_NAME).trim();
+    setCompositionName(nextName);
+
+    const duplicateByName = compositionLibrary.find(
+      (item) =>
+        item.name.toLowerCase() === nextName.toLowerCase() &&
+        (forceNew || item.id !== selectedCompositionId),
+    );
+    if (duplicateByName) {
+      setErrorMessage("Ja existe um conjunto com esse nome.");
+      return;
+    }
+
+    const baseCurrent = forceNew
+      ? null
+      : compositionLibrary.find((item) => item.id === selectedCompositionId) ?? null;
+
+    const updatedItem: StudioCompositionItem = baseCurrent
+      ? {
+          ...baseCurrent,
+          name: nextName,
+          layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+          updatedAt: Date.now(),
+        }
+      : {
+          id: createLibraryItemId(),
+          name: nextName,
+          layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+          updatedAt: Date.now(),
+        };
+
+    const nextItems = [updatedItem, ...compositionLibrary.filter((item) => item.id !== updatedItem.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+
+    setCompositionLibrary(nextItems);
+    setSelectedCompositionId(updatedItem.id);
+    setIsEditingCompositionName(false);
+    setSuccessMessage(baseCurrent ? "Conjunto salvo." : "Conjunto criado.");
+  }
+
   function promptAndSaveCompositionEntry() {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -1476,7 +1559,7 @@ export function PostStudio() {
     const selectedItem = compositionLibrary.find((item) => item.id === selectedCompositionId);
     const defaultName = selectedItem
       ? `${selectedItem.name} copia`
-      : `Conjunto ${compositionLibrary.length + 1}`;
+      : `${(compositionName.trim() || DEFAULT_COMPOSITION_NAME)} copia`;
     const rawName = window.prompt("Nome do conjunto (HTML)", defaultName);
     if (rawName === null) return;
 
@@ -1485,6 +1568,8 @@ export function PostStudio() {
       setErrorMessage("Informe um nome para o conjunto.");
       return;
     }
+
+    setCompositionName(name);
 
     const existing = compositionLibrary.find((item) => item.name.toLowerCase() === name.toLowerCase());
     const updatedItem: StudioCompositionItem = existing
@@ -1522,6 +1607,7 @@ export function PostStudio() {
 
     const updated: StudioCompositionItem = {
       ...current,
+      name: compositionName.trim() || current.name || DEFAULT_COMPOSITION_NAME,
       layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
       updatedAt: Date.now(),
     };
@@ -1569,6 +1655,7 @@ export function PostStudio() {
       (a, b) => b.updatedAt - a.updatedAt,
     );
     setCompositionLibrary(nextItems);
+    setCompositionName(nextName);
     setSuccessMessage("Conjunto atualizado.");
   }
 
@@ -1587,6 +1674,8 @@ export function PostStudio() {
 
     setCompositionLibrary(compositionLibrary.filter((item) => item.id !== current.id));
     setSelectedCompositionId("");
+    setCompositionName(DEFAULT_COMPOSITION_NAME);
+    setIsEditingCompositionName(false);
     setSuccessMessage("Conjunto removido.");
   }
 
@@ -1644,7 +1733,7 @@ export function PostStudio() {
   }
 
   async function handleDownloadPng() {
-    if (!exportRef.current) return;
+    if (!previewCanvasExportRef.current) return;
     setErrorMessage(null);
     setIsDownloading(true);
 
@@ -1655,9 +1744,12 @@ export function PostStudio() {
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
       }
 
-      await waitForNodeImages(exportRef.current);
+      await waitForDocumentFonts();
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      await waitForNodeImages(previewCanvasExportRef.current);
 
-      const dataUrl = await toPng(exportRef.current, {
+      const dataUrl = await toPng(previewCanvasExportRef.current, {
         cacheBust: true,
         includeQueryParams: true,
         pixelRatio: 1,
@@ -1669,7 +1761,9 @@ export function PostStudio() {
 
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `flowgram-post-${preset.width}x${preset.height}.png`;
+      const fileBase = sanitizeFileNameBase(getSelectedCompositionName());
+      const formatLabel = sanitizeFileNameBase(getPresetExportLabel(preset.key));
+      link.download = `${fileBase}-${formatLabel}.png`;
       link.click();
     } catch (error) {
       setErrorMessage(
@@ -1732,6 +1826,8 @@ export function PostStudio() {
                 setSelectedHtmlLayerIds(createEmptyHtmlLayerSelections());
                 setSelectedCssId("");
                 setSelectedCompositionId("");
+                setCompositionName(DEFAULT_COMPOSITION_NAME);
+                setIsEditingCompositionName(false);
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
@@ -1752,8 +1848,19 @@ export function PostStudio() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_580px]">
         <section className="panel-soft flex flex-col p-4 md:p-5">
           <div className="order-1 mb-4">
-            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)] px-3 py-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)]">
+              <div
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-2 border-b border-[rgba(255,255,255,0.05)] px-3 py-2.5"
+                onClick={() => openLibraryModal("composition")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openLibraryModal("composition");
+                  }
+                }}
+              >
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
                     <FolderOpen className="h-4 w-4" />
@@ -1763,13 +1870,99 @@ export function PostStudio() {
                   </span>
                 </div>
 
-                <button
-                  className="min-w-0 max-w-full truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
-                  onClick={() => openLibraryModal("composition")}
-                  type="button"
-                >
-                  {getSelectedCompositionName()}
-                </button>
+                <div className="flex min-w-0 items-center gap-2">
+                  {isEditingCompositionName ? (
+                    <input
+                      autoFocus
+                      className="h-9 min-w-[180px] max-w-[320px] rounded-lg border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--ring)]"
+                      onBlur={() => {
+                        setCompositionName((prev) => prev.trim() || DEFAULT_COMPOSITION_NAME);
+                        setIsEditingCompositionName(false);
+                      }}
+                      onChange={(event) => setCompositionName(event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          setCompositionName((prev) => prev.trim() || DEFAULT_COMPOSITION_NAME);
+                          setIsEditingCompositionName(false);
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setCompositionName((prev) => prev.trim() || DEFAULT_COMPOSITION_NAME);
+                          setIsEditingCompositionName(false);
+                        }
+                      }}
+                      value={compositionName}
+                    />
+                  ) : (
+                    <button
+                      className="min-w-0 max-w-[340px] truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setIsEditingCompositionName(true);
+                      }}
+                      type="button"
+                    >
+                      {getSelectedCompositionName()}
+                    </button>
+                  )}
+
+                  <Button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      saveCurrentCompositionCombination();
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4" />
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 p-3">
+                {STUDIO_HTML_LAYER_CONFIGS.map((layer) => (
+                  <details
+                    className="group rounded-xl border border-[rgba(255,255,255,0.07)] bg-[rgba(10,8,18,0.4)]"
+                    key={layer.key}
+                    onToggle={(event) =>
+                      handlePanelToggle(layer.key, (event.currentTarget as HTMLDetailsElement).open)
+                    }
+                    open={openPanels[layer.key]}
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 marker:hidden">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                        {layer.label}
+                      </span>
+                      <button
+                        className="min-w-0 max-w-[68%] truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          openLibraryModal(layer.key);
+                        }}
+                        type="button"
+                      >
+                        {getSelectedLibraryName(layer.key)}
+                      </button>
+                    </summary>
+
+                    <div className="px-3 pb-3">
+                      <Textarea
+                        className={cn(
+                          "font-mono text-xs leading-5",
+                          layer.key === "content" ? "min-h-[320px]" : "min-h-[170px]",
+                        )}
+                        onChange={(event) => setHtmlLayerContent(layer.key, event.target.value)}
+                        spellCheck={false}
+                        value={htmlLayers[layer.key]}
+                      />
+                    </div>
+                  </details>
+                ))}
               </div>
             </div>
           </div>
@@ -1948,46 +2141,6 @@ export function PostStudio() {
           </div>
 
           <div className="order-2 grid gap-3">
-            {STUDIO_HTML_LAYER_CONFIGS.map((layer) => (
-              <details
-                className="group rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)]"
-                key={layer.key}
-                onToggle={(event) =>
-                  handlePanelToggle(layer.key, (event.currentTarget as HTMLDetailsElement).open)
-                }
-                open={openPanels[layer.key]}
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 marker:hidden">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                    {layer.label}
-                  </span>
-                  <button
-                    className="min-w-0 max-w-[68%] truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      openLibraryModal(layer.key);
-                    }}
-                    type="button"
-                  >
-                    {getSelectedLibraryName(layer.key)}
-                  </button>
-                </summary>
-
-                <div className="px-3 pb-3">
-                  <Textarea
-                    className={cn(
-                      "font-mono text-xs leading-5",
-                      layer.key === "content" ? "min-h-[320px]" : "min-h-[170px]",
-                    )}
-                    onChange={(event) => setHtmlLayerContent(layer.key, event.target.value)}
-                    spellCheck={false}
-                    value={htmlLayers[layer.key]}
-                  />
-                </div>
-              </details>
-            ))}
-
             <details
               className="group rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)]"
               onToggle={(event) => handlePanelToggle("css", (event.currentTarget as HTMLDetailsElement).open)}
@@ -2056,15 +2209,17 @@ export function PostStudio() {
                   transformOrigin: "top left",
                 }}
               >
-                <StudioCanvas
-                  key={`preview-${logoRenderNonce}`}
-                  css={css}
-                  height={preset.height}
-                  htmlLayers={htmlLayers}
-                  logoInlineDataUrl={logoInlineDataUrl}
-                  mode="export"
-                  width={preset.width}
-                />
+                <div ref={previewCanvasExportRef}>
+                  <StudioCanvas
+                    key={`preview-${logoRenderNonce}`}
+                    css={css}
+                    height={preset.height}
+                    htmlLayers={htmlLayers}
+                    logoInlineDataUrl={logoInlineDataUrl}
+                    mode="export"
+                    width={preset.width}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -2141,19 +2296,6 @@ export function PostStudio() {
         </div>
       ) : null}
 
-      <div className="pointer-events-none fixed -left-[99999px] top-0">
-        <div ref={exportRef}>
-          <StudioCanvas
-            key={`export-${logoRenderNonce}`}
-            css={css}
-            height={preset.height}
-            htmlLayers={htmlLayers}
-            logoInlineDataUrl={logoInlineDataUrl}
-            mode="export"
-            width={preset.width}
-          />
-        </div>
-      </div>
     </div>
   );
 }
