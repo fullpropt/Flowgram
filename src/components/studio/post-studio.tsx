@@ -1,9 +1,10 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Download, FolderOpen, Pencil, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,31 @@ interface StudioLibraryItem {
   updatedAt: number;
 }
 
+interface StudioLogoAsset {
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  updatedAt: string;
+}
+
+interface StudioReferenceAsset {
+  id: string;
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+  url: string;
+}
+
+interface StudioAssetsResponse {
+  logo: StudioLogoAsset | null;
+  references: StudioReferenceAsset[];
+  logoUrl: string;
+  logoSnippet: string;
+}
+
 const STUDIO_PRESETS: StudioPreset[] = [
   { key: "feedPortrait", label: "Feed 4:5 (1080x1350)", width: 1080, height: 1350 },
   { key: "feedSquare", label: "Feed 1:1 (1080x1080)", width: 1080, height: 1080 },
@@ -31,6 +57,7 @@ const STUDIO_PRESETS: StudioPreset[] = [
 
 const STUDIO_HTML_LIBRARY_KEY = "flowgram-lab:studio:html-library:v1";
 const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
+const STUDIO_LOGO_FIXED_URL = "/api/studio/assets/logo";
 
 const DEFAULT_HTML = `<article class="post">
   <div class="post__glow post__glow--a"></div>
@@ -473,6 +500,45 @@ function scopeStudioCss(css: string, rootSelector = ".studio-canvas-root"): stri
   return output;
 }
 
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let index = 0;
+
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+
+  const decimals = size >= 100 || index === 0 ? 0 : 1;
+  return `${size.toFixed(decimals)} ${units[index]}`;
+}
+
+function formatDateTimeLabel(isoString: string) {
+  const timestamp = Date.parse(isoString);
+  if (Number.isNaN(timestamp)) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(timestamp));
+}
+
+async function readApiErrorMessage(response: Response, fallbackMessage: string) {
+  try {
+    const body = (await response.json()) as { message?: string };
+    if (typeof body?.message === "string" && body.message.trim()) {
+      return body.message;
+    }
+  } catch {
+    // ignore body parse error and return fallback
+  }
+
+  return fallbackMessage;
+}
+
 function StudioCanvas({
   html,
   css,
@@ -521,6 +587,11 @@ export function PostStudio() {
   const [html, setHtml] = useState(DEFAULT_HTML);
   const [css, setCss] = useState(DEFAULT_CSS);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingReferences, setIsUploadingReferences] = useState(false);
+  const [removingReferenceId, setRemovingReferenceId] = useState<string | null>(null);
+  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [htmlLibrary, setHtmlLibrary] = useState<StudioLibraryItem[]>([]);
@@ -528,6 +599,11 @@ export function PostStudio() {
   const [selectedHtmlId, setSelectedHtmlId] = useState("");
   const [selectedCssId, setSelectedCssId] = useState("");
   const [librariesHydrated, setLibrariesHydrated] = useState(false);
+  const [logoAsset, setLogoAsset] = useState<StudioLogoAsset | null>(null);
+  const [referenceAssets, setReferenceAssets] = useState<StudioReferenceAsset[]>([]);
+  const [logoUrl, setLogoUrl] = useState(STUDIO_LOGO_FIXED_URL);
+  const [logoSnippet, setLogoSnippet] = useState(`<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`);
+  const [logoRenderNonce, setLogoRenderNonce] = useState(0);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const preset = STUDIO_PRESETS.find((item) => item.key === presetKey) ?? STUDIO_PRESETS[0]!;
@@ -539,6 +615,7 @@ export function PostStudio() {
     setHtmlLibrary(readLibraryItems(STUDIO_HTML_LIBRARY_KEY));
     setCssLibrary(readLibraryItems(STUDIO_CSS_LIBRARY_KEY));
     setLibrariesHydrated(true);
+    void loadStudioAssets();
   }, []);
 
   useEffect(() => {
@@ -557,6 +634,204 @@ export function PostStudio() {
     const timer = window.setTimeout(() => setSuccessMessage(null), 2800);
     return () => window.clearTimeout(timer);
   }, [successMessage]);
+
+  async function loadStudioAssets() {
+    setIsLoadingAssets(true);
+
+    try {
+      const response = await fetch("/api/studio/assets", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const message = await readApiErrorMessage(response, "Falha ao carregar assets do Studio.");
+        throw new Error(message);
+      }
+
+      const body = (await response.json()) as StudioAssetsResponse;
+      setLogoAsset(body.logo ?? null);
+      setReferenceAssets(Array.isArray(body.references) ? body.references : []);
+      setLogoUrl(typeof body.logoUrl === "string" && body.logoUrl ? body.logoUrl : STUDIO_LOGO_FIXED_URL);
+      setLogoSnippet(
+        typeof body.logoSnippet === "string" && body.logoSnippet
+          ? body.logoSnippet
+          : `<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao carregar assets do Studio.",
+      );
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  }
+
+  function applyStudioAssetsResponse(body: StudioAssetsResponse) {
+    setLogoAsset(body.logo ?? null);
+    setReferenceAssets(Array.isArray(body.references) ? body.references : []);
+    setLogoUrl(typeof body.logoUrl === "string" && body.logoUrl ? body.logoUrl : STUDIO_LOGO_FIXED_URL);
+    setLogoSnippet(
+      typeof body.logoSnippet === "string" && body.logoSnippet
+        ? body.logoSnippet
+        : `<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`,
+    );
+  }
+
+  async function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/studio/assets/logo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = await readApiErrorMessage(response, "Falha ao enviar logo.");
+        throw new Error(message);
+      }
+
+      const body = (await response.json()) as StudioAssetsResponse;
+      applyStudioAssetsResponse(body);
+      setLogoRenderNonce((value) => value + 1);
+      setSuccessMessage("Logo enviada. Use a URL fixa no HTML para reaproveitar automaticamente.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Falha ao enviar logo.");
+    } finally {
+      event.target.value = "";
+      setIsUploadingLogo(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    if (!logoAsset) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsRemovingLogo(true);
+
+    try {
+      const response = await fetch("/api/studio/assets/logo", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const message = await readApiErrorMessage(response, "Falha ao remover logo.");
+        throw new Error(message);
+      }
+
+      const body = (await response.json()) as StudioAssetsResponse;
+      applyStudioAssetsResponse(body);
+      setLogoRenderNonce((value) => value + 1);
+      setSuccessMessage("Logo removida.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Falha ao remover logo.");
+    } finally {
+      setIsRemovingLogo(false);
+    }
+  }
+
+  async function handleReferenceFilesChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsUploadingReferences(true);
+
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+
+      const response = await fetch("/api/studio/assets/references", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = await readApiErrorMessage(response, "Falha ao enviar arquivos de referencia.");
+        throw new Error(message);
+      }
+
+      const body = (await response.json()) as StudioAssetsResponse;
+      applyStudioAssetsResponse(body);
+      setSuccessMessage(
+        files.length === 1
+          ? "Arquivo de referencia enviado."
+          : `${files.length} arquivos de referencia enviados.`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao enviar arquivos de referencia.",
+      );
+    } finally {
+      event.target.value = "";
+      setIsUploadingReferences(false);
+    }
+  }
+
+  async function handleRemoveReference(referenceId: string) {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setRemovingReferenceId(referenceId);
+
+    try {
+      const response = await fetch(`/api/studio/assets/references/${encodeURIComponent(referenceId)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const message = await readApiErrorMessage(response, "Falha ao remover arquivo de referencia.");
+        throw new Error(message);
+      }
+
+      const body = (await response.json()) as StudioAssetsResponse;
+      applyStudioAssetsResponse(body);
+      setSuccessMessage("Arquivo de referencia removido.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Falha ao remover arquivo de referencia.",
+      );
+    } finally {
+      setRemovingReferenceId(null);
+    }
+  }
+
+  function insertLogoTagIntoHtml() {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!logoAsset) {
+      setErrorMessage("Envie uma logo antes de inserir a tag no HTML.");
+      return;
+    }
+
+    if (html.includes(STUDIO_LOGO_FIXED_URL)) {
+      setSuccessMessage("O HTML atual ja referencia a logo padrao.");
+      return;
+    }
+
+    const logoTag = `<img class="brand-logo" src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`;
+
+    if (/<header\b/i.test(html)) {
+      setHtml((currentHtml) => currentHtml.replace(/(<header\b[^>]*>)/i, `$1\n      ${logoTag}`));
+    } else {
+      setHtml((currentHtml) => `${logoTag}\n${currentHtml}`);
+    }
+
+    setSuccessMessage("Tag da logo inserida no HTML.");
+  }
 
   function promptAndSaveLibraryEntry(kind: "html" | "css") {
     setErrorMessage(null);
@@ -946,6 +1221,169 @@ export function PostStudio() {
             </div>
           </div>
 
+          <div className="mb-4 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
+                  <FolderOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Logo da marca
+                  </p>
+                  <p className="text-[11px] text-[var(--muted)]">
+                    URL fixa para usar no HTML: <code>{logoUrl}</code>
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <Input
+                  accept="image/*,.svg"
+                  disabled={isUploadingLogo}
+                  onChange={handleLogoFileChange}
+                  type="file"
+                />
+
+                <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.45)] p-2">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Snippet pronto
+                  </p>
+                  <code className="block overflow-x-auto whitespace-nowrap text-[11px] text-[var(--foreground)]">
+                    {logoSnippet}
+                  </code>
+                </div>
+
+                {logoAsset ? (
+                  <div className="grid gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.38)] p-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                          {logoAsset.originalName}
+                        </p>
+                        <p className="text-xs text-[var(--muted)]">
+                          {formatFileSize(logoAsset.size)} • {formatDateTimeLabel(logoAsset.updatedAt)}
+                        </p>
+                      </div>
+
+                      <Button
+                        disabled={isRemovingLogo}
+                        onClick={handleRemoveLogo}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
+                      </Button>
+                    </div>
+
+                    <div className="rounded-lg border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-2">
+                      <img
+                        alt="Preview da logo"
+                        className="max-h-20 max-w-full object-contain"
+                        src={`${logoUrl}?v=${encodeURIComponent(logoAsset.updatedAt)}`}
+                      />
+                    </div>
+
+                    <Button onClick={insertLogoTagIntoHtml} size="sm" variant="outline">
+                      Inserir tag da logo no HTML
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--muted)]">
+                    Nenhuma logo enviada ainda. Apos o upload, use sempre <code>{logoUrl}</code> no HTML.
+                  </p>
+                )}
+
+                {isUploadingLogo ? (
+                  <p className="text-xs text-[var(--muted)]">Enviando logo...</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
+                  <Save className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Arquivos de referencia
+                  </p>
+                  <p className="text-[11px] text-[var(--muted)]">
+                    Use para anexar guias, prints, PDFs e materiais para estudo visual.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <Input
+                  disabled={isUploadingReferences}
+                  multiple
+                  onChange={handleReferenceFilesChange}
+                  type="file"
+                />
+
+                <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.38)] p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                      Arquivos enviados
+                    </p>
+                    <p className="text-[11px] text-[var(--muted)]">{referenceAssets.length}</p>
+                  </div>
+
+                  {isLoadingAssets ? (
+                    <p className="text-xs text-[var(--muted)]">Carregando arquivos...</p>
+                  ) : referenceAssets.length === 0 ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Ainda nao ha arquivos. Eles serao salvos localmente no servidor deste projeto.
+                    </p>
+                  ) : (
+                    <div className="max-h-48 space-y-2 overflow-auto pr-1">
+                      {referenceAssets.map((file) => (
+                        <div
+                          className="rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.02)] p-2"
+                          key={file.id}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-[var(--foreground)]">{file.originalName}</p>
+                              <p className="text-[11px] text-[var(--muted)]">
+                                {formatFileSize(file.size)} • {formatDateTimeLabel(file.uploadedAt)}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <a
+                                className="inline-flex h-8 items-center rounded-lg border border-[rgba(255,255,255,0.08)] px-2 text-xs text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.05)]"
+                                href={file.url}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
+                                Abrir
+                              </a>
+                              <Button
+                                disabled={removingReferenceId === file.id}
+                                onClick={() => void handleRemoveReference(file.id)}
+                                size="icon"
+                                variant="ghost"
+                              >
+                                <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {isUploadingReferences ? (
+                  <p className="text-xs text-[var(--muted)]">Enviando arquivos de referencia...</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
@@ -1010,7 +1448,13 @@ export function PostStudio() {
                   transformOrigin: "top left",
                 }}
               >
-                <StudioCanvas css={css} height={preset.height} html={html} width={preset.width} />
+                <StudioCanvas
+                  key={`preview-${logoRenderNonce}`}
+                  css={css}
+                  height={preset.height}
+                  html={html}
+                  width={preset.width}
+                />
               </div>
             </div>
           </div>
@@ -1023,7 +1467,13 @@ export function PostStudio() {
 
       <div className="pointer-events-none fixed -left-[99999px] top-0">
         <div ref={exportRef}>
-          <StudioCanvas css={css} height={preset.height} html={html} width={preset.width} />
+          <StudioCanvas
+            key={`export-${logoRenderNonce}`}
+            css={css}
+            height={preset.height}
+            html={html}
+            width={preset.width}
+          />
         </div>
       </div>
     </div>
