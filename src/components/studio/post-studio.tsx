@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { Download, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, FolderOpen, RotateCcw, Save, Trash2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +17,21 @@ interface StudioPreset {
   height: number;
 }
 
+interface StudioLibraryItem {
+  id: string;
+  name: string;
+  content: string;
+  updatedAt: number;
+}
+
 const STUDIO_PRESETS: StudioPreset[] = [
   { key: "feedPortrait", label: "Feed 4:5 (1080x1350)", width: 1080, height: 1350 },
   { key: "feedSquare", label: "Feed 1:1 (1080x1080)", width: 1080, height: 1080 },
   { key: "story", label: "Story 9:16 (1080x1920)", width: 1080, height: 1920 },
 ];
+
+const STUDIO_HTML_LIBRARY_KEY = "flowgram-lab:studio:html-library:v1";
+const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
 
 const DEFAULT_HTML = `<div class="card">
   <div class="eyebrow">FLOWGRAM LAB</div>
@@ -107,6 +118,47 @@ p {
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(39, 24, 62, 0.78);
 }`;
+
+function createLibraryItemId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `studio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function readLibraryItems(storageKey: string): StudioLibraryItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((item): item is StudioLibraryItem => {
+        return (
+          item &&
+          typeof item === "object" &&
+          typeof item.id === "string" &&
+          typeof item.name === "string" &&
+          typeof item.content === "string" &&
+          typeof item.updatedAt === "number"
+        );
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch {
+    return [];
+  }
+}
+
+function writeLibraryItems(storageKey: string, items: StudioLibraryItem[]) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(storageKey, JSON.stringify(items));
+}
 
 function sanitizeCode(input: string) {
   return input.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
@@ -269,12 +321,127 @@ export function PostStudio() {
   const [css, setCss] = useState(DEFAULT_CSS);
   const [isDownloading, setIsDownloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [htmlLibrary, setHtmlLibrary] = useState<StudioLibraryItem[]>([]);
+  const [cssLibrary, setCssLibrary] = useState<StudioLibraryItem[]>([]);
+  const [htmlEntryName, setHtmlEntryName] = useState("");
+  const [cssEntryName, setCssEntryName] = useState("");
+  const [selectedHtmlId, setSelectedHtmlId] = useState("");
+  const [selectedCssId, setSelectedCssId] = useState("");
+  const [librariesHydrated, setLibrariesHydrated] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const preset = STUDIO_PRESETS.find((item) => item.key === presetKey) ?? STUDIO_PRESETS[0]!;
   const previewScale = Math.min(1, 380 / preset.width, 560 / preset.height);
   const previewWidth = Math.round(preset.width * previewScale);
   const previewHeight = Math.round(preset.height * previewScale);
+
+  useEffect(() => {
+    setHtmlLibrary(readLibraryItems(STUDIO_HTML_LIBRARY_KEY));
+    setCssLibrary(readLibraryItems(STUDIO_CSS_LIBRARY_KEY));
+    setLibrariesHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!librariesHydrated) return;
+    writeLibraryItems(STUDIO_HTML_LIBRARY_KEY, htmlLibrary);
+  }, [htmlLibrary, librariesHydrated]);
+
+  useEffect(() => {
+    if (!librariesHydrated) return;
+    writeLibraryItems(STUDIO_CSS_LIBRARY_KEY, cssLibrary);
+  }, [cssLibrary, librariesHydrated]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timer = window.setTimeout(() => setSuccessMessage(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
+
+  function saveLibraryEntry(kind: "html" | "css") {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const content = kind === "html" ? html.trim() : css.trim();
+    const name = (kind === "html" ? htmlEntryName : cssEntryName).trim();
+
+    if (!name) {
+      setErrorMessage(`Informe um nome para ${kind === "html" ? "a estrutura" : "o estilo"}.`);
+      return;
+    }
+
+    if (!content) {
+      setErrorMessage(`Nao ha conteudo de ${kind === "html" ? "HTML" : "CSS"} para salvar.`);
+      return;
+    }
+
+    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
+    const currentItems = kind === "html" ? htmlLibrary : cssLibrary;
+    const selectItem = kind === "html" ? setSelectedHtmlId : setSelectedCssId;
+
+    const existing = currentItems.find((item) => item.name.toLowerCase() === name.toLowerCase());
+    const updatedItem: StudioLibraryItem = existing
+      ? { ...existing, name, content, updatedAt: Date.now() }
+      : { id: createLibraryItemId(), name, content, updatedAt: Date.now() };
+
+    const nextItems = [updatedItem, ...currentItems.filter((item) => item.id !== updatedItem.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+
+    setItems(nextItems);
+    selectItem(updatedItem.id);
+    setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} salvo com sucesso.`);
+  }
+
+  function loadSelectedLibraryEntry(kind: "html" | "css") {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
+    const items = kind === "html" ? htmlLibrary : cssLibrary;
+
+    const found = items.find((item) => item.id === selectedId);
+    if (!found) {
+      setErrorMessage(`Selecione ${kind === "html" ? "uma estrutura" : "um estilo"} para carregar.`);
+      return;
+    }
+
+    if (kind === "html") {
+      setHtml(found.content);
+      setHtmlEntryName(found.name);
+    } else {
+      setCss(found.content);
+      setCssEntryName(found.name);
+    }
+
+    setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} carregado.`);
+  }
+
+  function removeSelectedLibraryEntry(kind: "html" | "css") {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
+    const items = kind === "html" ? htmlLibrary : cssLibrary;
+    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
+    const clearSelected = kind === "html" ? setSelectedHtmlId : setSelectedCssId;
+
+    const found = items.find((item) => item.id === selectedId);
+    if (!found) {
+      setErrorMessage(`Selecione ${kind === "html" ? "uma estrutura" : "um estilo"} para excluir.`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Excluir ${kind === "html" ? "a estrutura" : "o estilo"} "${found.name}" da biblioteca?`,
+    );
+    if (!confirmed) return;
+
+    setItems(items.filter((item) => item.id !== selectedId));
+    clearSelected("");
+    setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} removido.`);
+  }
 
   async function handleDownloadPng() {
     if (!exportRef.current) return;
@@ -316,9 +483,9 @@ export function PostStudio() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="grid gap-1">
-              <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="grid gap-1 self-end">
+              <span className="px-1 text-center text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                 Tamanho
               </span>
               <select
@@ -335,10 +502,12 @@ export function PostStudio() {
             </label>
 
             <Button
+              className="self-end"
               onClick={() => {
                 setHtml(DEFAULT_HTML);
                 setCss(DEFAULT_CSS);
                 setErrorMessage(null);
+                setSuccessMessage(null);
               }}
               variant="outline"
             >
@@ -346,7 +515,7 @@ export function PostStudio() {
               Resetar template
             </Button>
 
-            <Button disabled={isDownloading} onClick={handleDownloadPng}>
+            <Button className="self-end" disabled={isDownloading} onClick={handleDownloadPng}>
               <Download className="h-4 w-4" />
               {isDownloading ? "Gerando..." : "Baixar PNG"}
             </Button>
@@ -356,6 +525,110 @@ export function PostStudio() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_420px]">
         <section className="panel-soft p-4 md:p-5">
+          <div className="mb-4 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
+                  <FolderOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Estruturas (HTML)
+                  </p>
+                  <p className="text-xs text-[var(--muted)]">Salve layouts para reutilizar depois.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                  <select
+                    className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
+                    onChange={(event) => setSelectedHtmlId(event.target.value)}
+                    value={selectedHtmlId}
+                  >
+                    <option value="">Selecione uma estrutura salva</option>
+                    {htmlLibrary.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button onClick={() => loadSelectedLibraryEntry("html")} size="sm" variant="outline">
+                    Carregar
+                  </Button>
+
+                  <Button onClick={() => removeSelectedLibraryEntry("html")} size="sm" variant="ghost">
+                    <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
+                  </Button>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <Input
+                    onChange={(event) => setHtmlEntryName(event.target.value)}
+                    placeholder="Nome da estrutura"
+                    value={htmlEntryName}
+                  />
+                  <Button onClick={() => saveLibraryEntry("html")} size="sm" variant="secondary">
+                    <Save className="h-4 w-4" />
+                    Salvar HTML
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
+                  <Save className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Estilos (CSS)
+                  </p>
+                  <p className="text-xs text-[var(--muted)]">Guarde seus temas e variações visuais.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                  <select
+                    className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
+                    onChange={(event) => setSelectedCssId(event.target.value)}
+                    value={selectedCssId}
+                  >
+                    <option value="">Selecione um estilo salvo</option>
+                    {cssLibrary.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button onClick={() => loadSelectedLibraryEntry("css")} size="sm" variant="outline">
+                    Carregar
+                  </Button>
+
+                  <Button onClick={() => removeSelectedLibraryEntry("css")} size="sm" variant="ghost">
+                    <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
+                  </Button>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <Input
+                    onChange={(event) => setCssEntryName(event.target.value)}
+                    placeholder="Nome do estilo"
+                    value={cssEntryName}
+                  />
+                  <Button onClick={() => saveLibraryEntry("css")} size="sm" variant="secondary">
+                    <Save className="h-4 w-4" />
+                    Salvar CSS
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
@@ -385,6 +658,12 @@ export function PostStudio() {
           {errorMessage ? (
             <div className="mt-4 rounded-xl border border-[#8a3c58] bg-[rgba(72,20,36,0.35)] px-3 py-2 text-sm text-[#ffd1dd]">
               {errorMessage}
+            </div>
+          ) : null}
+
+          {successMessage ? (
+            <div className="mt-4 rounded-xl border border-[rgba(25,195,125,0.32)] bg-[rgba(18,56,42,0.32)] px-3 py-2 text-sm text-[#b7f4d9]">
+              {successMessage}
             </div>
           ) : null}
         </section>
