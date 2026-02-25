@@ -657,6 +657,42 @@ export function PostStudio() {
     setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} atualizada.`);
   }
 
+  function saveChangesToSelectedLibraryEntry(kind: "html" | "css") {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
+    const items = kind === "html" ? htmlLibrary : cssLibrary;
+    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
+    const currentContent = kind === "html" ? html.trim() : css.trim();
+
+    if (!currentContent) {
+      setErrorMessage(`Nao ha conteudo de ${kind === "html" ? "HTML" : "CSS"} para salvar.`);
+      return;
+    }
+
+    const currentItem = items.find((item) => item.id === selectedId);
+    if (!currentItem) {
+      setErrorMessage(`Selecione ${kind === "html" ? "uma estrutura" : "um estilo"} para salvar alteracoes.`);
+      return;
+    }
+
+    const updated = {
+      ...currentItem,
+      content: currentContent,
+      updatedAt: Date.now(),
+    };
+
+    const nextItems = [updated, ...items.filter((item) => item.id !== currentItem.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+
+    setItems(nextItems);
+    setSuccessMessage(
+      `${kind === "html" ? "Estrutura" : "Estilo"} salvo${kind === "html" ? "a" : ""} no item selecionado.`,
+    );
+  }
+
   function removeSelectedLibraryEntry(kind: "html" | "css") {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -778,7 +814,7 @@ export function PostStudio() {
               </div>
 
               <div className="grid gap-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
                     onChange={(event) => {
@@ -813,9 +849,18 @@ export function PostStudio() {
                   </Button>
 
                   <Button
+                    onClick={() => saveChangesToSelectedLibraryEntry("html")}
+                    size="icon"
+                    title="Salvar alteracoes no item HTML selecionado"
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+
+                  <Button
                     onClick={() => updateSelectedLibraryEntry("html")}
                     size="icon"
-                    title="Editar item HTML selecionado"
+                    title="Renomear/editar item HTML selecionado"
                     variant="outline"
                   >
                     <Pencil className="h-4 w-4" />
@@ -841,7 +886,7 @@ export function PostStudio() {
               </div>
 
               <div className="grid gap-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
                     onChange={(event) => {
@@ -876,9 +921,18 @@ export function PostStudio() {
                   </Button>
 
                   <Button
+                    onClick={() => saveChangesToSelectedLibraryEntry("css")}
+                    size="icon"
+                    title="Salvar alteracoes no item CSS selecionado"
+                    variant="outline"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+
+                  <Button
                     onClick={() => updateSelectedLibraryEntry("css")}
                     size="icon"
-                    title="Editar item CSS selecionado"
+                    title="Renomear/editar item CSS selecionado"
                     variant="outline"
                   >
                     <Pencil className="h-4 w-4" />
