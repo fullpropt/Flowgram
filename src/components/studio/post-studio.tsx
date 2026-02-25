@@ -96,6 +96,8 @@ const STUDIO_CANVAS_EXPORT_GUARD_CSS = `
   border-radius: 0 !important;
 }
 `;
+const STUDIO_LOGO_SRC_PATTERN =
+  /(\bsrc\s*=\s*["'])(?:https?:\/\/[^"' ]+)?\/api\/studio\/assets\/logo(?:\?[^"']*)?(["'])/gi;
 
 const DEFAULT_HTML = `<article class="post">
   <div class="post__glow post__glow--a"></div>
@@ -382,6 +384,72 @@ function createLibraryItemId() {
   return `studio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function replaceStudioLogoSrcForCanvas(html: string, logoInlineDataUrl: string | null) {
+  if (!logoInlineDataUrl) return html;
+  return html.replace(STUDIO_LOGO_SRC_PATTERN, `$1${logoInlineDataUrl}$2`);
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo de logo."));
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Falha ao converter logo para data URL."));
+        return;
+      }
+      resolve(reader.result);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function fetchStudioLogoDataUrl(logoUrl: string, cacheKey?: string | number) {
+  const requestUrl = cacheKey ? `${logoUrl}?v=${encodeURIComponent(String(cacheKey))}` : logoUrl;
+  const response = await fetch(requestUrl, {
+    cache: "no-store",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Falha ao carregar logo para renderizacao.");
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+async function waitForNodeImages(node: HTMLElement) {
+  const images = Array.from(node.querySelectorAll("img"));
+  if (images.length === 0) return;
+
+  await Promise.all(
+    images.map(async (image) => {
+      if (image.complete) return;
+
+      try {
+        if ("decode" in image) {
+          await image.decode();
+          if (image.naturalWidth > 0) return;
+        }
+      } catch {
+        // fallback to load/error listeners below
+      }
+
+      await new Promise<void>((resolve) => {
+        const finalize = () => {
+          image.removeEventListener("load", finalize);
+          image.removeEventListener("error", finalize);
+          resolve();
+        };
+
+        image.addEventListener("load", finalize, { once: true });
+        image.addEventListener("error", finalize, { once: true });
+      });
+    }),
+  );
+}
+
 function readLibraryItems(storageKey: string): StudioLibraryItem[] {
   if (typeof window === "undefined") return [];
 
@@ -583,6 +651,7 @@ function StudioCanvas({
   width,
   height,
   className,
+  logoInlineDataUrl,
   mode = "preview",
 }: {
   html: string;
@@ -590,11 +659,16 @@ function StudioCanvas({
   width: number;
   height: number;
   className?: string;
+  logoInlineDataUrl?: string | null;
   mode?: "preview" | "export";
 }) {
   const safeHtml = useMemo(() => sanitizeStructuralHtml(html), [html]);
   const safeCss = useMemo(() => sanitizeCssCode(css), [css]);
   const scopedCss = useMemo(() => scopeStudioCss(safeCss), [safeCss]);
+  const renderHtml = useMemo(
+    () => replaceStudioLogoSrcForCanvas(safeHtml, logoInlineDataUrl ?? null),
+    [safeHtml, logoInlineDataUrl],
+  );
 
   return (
     <div
@@ -618,7 +692,7 @@ function StudioCanvas({
       `}</style>
       <div
         className="studio-canvas-root"
-        dangerouslySetInnerHTML={{ __html: safeHtml }}
+        dangerouslySetInnerHTML={{ __html: renderHtml }}
       />
     </div>
   );
@@ -644,6 +718,7 @@ export function PostStudio() {
   const [logoAsset, setLogoAsset] = useState<StudioLogoAsset | null>(null);
   const [referenceAssets, setReferenceAssets] = useState<StudioReferenceAsset[]>([]);
   const [logoUrl, setLogoUrl] = useState(STUDIO_LOGO_FIXED_URL);
+  const [logoInlineDataUrl, setLogoInlineDataUrl] = useState<string | null>(null);
   const [logoRenderNonce, setLogoRenderNonce] = useState(0);
   const logoFileInputId = useId();
   const referencesFileInputId = useId();
@@ -677,6 +752,34 @@ export function PostStudio() {
     const timer = window.setTimeout(() => setSuccessMessage(null), 2800);
     return () => window.clearTimeout(timer);
   }, [successMessage]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!logoAsset) {
+      setLogoInlineDataUrl(null);
+      return () => {
+        isActive = false;
+      };
+    }
+
+    void (async () => {
+      try {
+        const dataUrl = await fetchStudioLogoDataUrl(logoUrl, logoAsset.updatedAt);
+        if (isActive) {
+          setLogoInlineDataUrl(dataUrl);
+        }
+      } catch {
+        if (isActive) {
+          // Keep any previous inline logo to avoid visual flicker on transient failures.
+        }
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [logoAsset, logoUrl]);
 
   async function loadStudioAssets() {
     setIsLoadingAssets(true);
@@ -1007,6 +1110,14 @@ export function PostStudio() {
     setIsDownloading(true);
 
     try {
+      if (logoAsset && html.includes(STUDIO_LOGO_FIXED_URL) && !logoInlineDataUrl) {
+        const dataUrl = await fetchStudioLogoDataUrl(logoUrl, logoAsset.updatedAt);
+        setLogoInlineDataUrl(dataUrl);
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      }
+
+      await waitForNodeImages(exportRef.current);
+
       const dataUrl = await toPng(exportRef.current, {
         cacheBust: true,
         includeQueryParams: true,
@@ -1479,6 +1590,7 @@ export function PostStudio() {
                   css={css}
                   height={preset.height}
                   html={html}
+                  logoInlineDataUrl={logoInlineDataUrl}
                   width={preset.width}
                 />
               </div>
@@ -1494,6 +1606,7 @@ export function PostStudio() {
             css={css}
             height={preset.height}
             html={html}
+            logoInlineDataUrl={logoInlineDataUrl}
             mode="export"
             width={preset.width}
           />
