@@ -56,31 +56,6 @@ const STUDIO_PRESETS: StudioPreset[] = [
 const STUDIO_HTML_LIBRARY_KEY = "flowgram-lab:studio:html-library:v1";
 const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
 const STUDIO_LOGO_FIXED_URL = "/api/studio/assets/logo";
-const STUDIO_LOGO_HTML_TAG = `<img class="brand-logo" src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`;
-const STUDIO_BRAND_LOGO_CSS_RULE = `.brand-logo {
-  display: block !important;
-  width: 180px !important;
-  height: 56px !important;
-  max-width: none !important;
-  max-height: none !important;
-  min-width: 0 !important;
-  object-fit: cover !important;
-  object-position: center !important;
-  position: relative !important;
-  inset: auto !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  transform: none !important;
-  margin: 0 !important;
-  z-index: auto !important;
-  flex: 0 0 180px !important;
-  flex-shrink: 0 !important;
-}`;
-const STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE = `.post__header > .brand-logo + .post__badge-dot {
-  display: none;
-}`;
 const STUDIO_CANVAS_LOGO_GUARD_CSS = `
 .studio-canvas-root .post__header {
   display: flex;
@@ -122,7 +97,6 @@ const DEFAULT_HTML = `<article class="post">
 
   <div class="post__layer">
     <header class="post__header">
-      ${STUDIO_LOGO_HTML_TAG}
       <div class="post__badge-dot"></div>
       <div>
         <p class="post__eyebrow">Tema do Post</p>
@@ -217,10 +191,6 @@ const DEFAULT_CSS = `.post {
   align-items: center;
   gap: 12px;
 }
-
-${STUDIO_BRAND_LOGO_CSS_RULE}
-
-${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}
 
 .post__badge-dot {
   width: 16px;
@@ -601,42 +571,6 @@ async function readApiErrorMessage(response: Response, fallbackMessage: string) 
   return fallbackMessage;
 }
 
-function ensureStudioLogoTagInHtml(input: string) {
-  if (!input.trim()) return STUDIO_LOGO_HTML_TAG;
-  if (input.includes(STUDIO_LOGO_FIXED_URL)) return input;
-
-  if (/<header\b/i.test(input)) {
-    return input.replace(/(<header\b[^>]*>)/i, `$1\n      ${STUDIO_LOGO_HTML_TAG}`);
-  }
-
-  return `${STUDIO_LOGO_HTML_TAG}\n${input}`;
-}
-
-function ensureStudioLogoSupportCss(input: string) {
-  const source = input.trim();
-  if (!source) {
-    return `${STUDIO_BRAND_LOGO_CSS_RULE}\n\n${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}\n`;
-  }
-
-  const brandLogoRuleRegex = /\.brand-logo\s*\{[\s\S]*?\}/;
-  const hasBrandLogoRule = /\.brand-logo\b/.test(source);
-  const hasHeaderDotHideRule = /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(source);
-
-  let nextCss = source;
-
-  if (!hasBrandLogoRule) {
-    nextCss = `${nextCss}\n\n${STUDIO_BRAND_LOGO_CSS_RULE}`;
-  } else {
-    nextCss = nextCss.replace(brandLogoRuleRegex, STUDIO_BRAND_LOGO_CSS_RULE);
-  }
-
-  if (!hasHeaderDotHideRule) {
-    nextCss = `${nextCss}\n\n${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}`;
-  }
-
-  return `${nextCss.trim()}\n`;
-}
-
 function StudioCanvas({
   html,
   css,
@@ -792,10 +726,8 @@ export function PostStudio() {
 
       const body = (await response.json()) as StudioAssetsResponse;
       applyStudioAssetsResponse(body);
-      setHtml((currentHtml) => ensureStudioLogoTagInHtml(currentHtml));
-      setCss((currentCss) => ensureStudioLogoSupportCss(currentCss));
       setLogoRenderNonce((value) => value + 1);
-      setSuccessMessage("Logo enviada. O HTML usa a URL fixa automaticamente.");
+      setSuccessMessage(`Logo enviada. Use ${STUDIO_LOGO_FIXED_URL} no HTML quando quiser.`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Falha ao enviar logo.");
     } finally {
@@ -1118,8 +1050,8 @@ export function PostStudio() {
             <Button
               className="self-center"
               onClick={() => {
-                setHtml(ensureStudioLogoTagInHtml(DEFAULT_HTML));
-                setCss(ensureStudioLogoSupportCss(DEFAULT_CSS));
+                setHtml(DEFAULT_HTML);
+                setCss(DEFAULT_CSS);
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
@@ -1164,7 +1096,7 @@ export function PostStudio() {
                       const found = htmlLibrary.find((item) => item.id === nextId);
                       if (!found) return;
 
-                      setHtml(ensureStudioLogoTagInHtml(sanitizeStructuralHtml(found.content)));
+                      setHtml(sanitizeStructuralHtml(found.content));
                       setErrorMessage(null);
                       setSuccessMessage("Estrutura carregada.");
                     }}
@@ -1236,7 +1168,7 @@ export function PostStudio() {
                       const found = cssLibrary.find((item) => item.id === nextId);
                       if (!found) return;
 
-                      setCss(ensureStudioLogoSupportCss(found.content));
+                      setCss(found.content);
                       setErrorMessage(null);
                       setSuccessMessage("Estilo carregado.");
                     }}
@@ -1471,9 +1403,7 @@ export function PostStudio() {
               </label>
               <Textarea
                 className="min-h-[340px] font-mono text-xs leading-5"
-                onChange={(event) =>
-                  setHtml(ensureStudioLogoTagInHtml(sanitizeStructuralHtml(event.target.value)))
-                }
+                onChange={(event) => setHtml(sanitizeStructuralHtml(event.target.value))}
                 spellCheck={false}
                 value={html}
               />
@@ -1485,7 +1415,7 @@ export function PostStudio() {
               </label>
               <Textarea
                 className="min-h-[340px] font-mono text-xs leading-5"
-                onChange={(event) => setCss(ensureStudioLogoSupportCss(event.target.value))}
+                onChange={(event) => setCss(event.target.value)}
                 spellCheck={false}
                 value={css}
               />
