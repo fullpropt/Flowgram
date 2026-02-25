@@ -58,12 +58,16 @@ const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
 const STUDIO_LOGO_FIXED_URL = "/api/studio/assets/logo";
 const STUDIO_LOGO_HTML_TAG = `<img class="brand-logo" src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`;
 const STUDIO_BRAND_LOGO_CSS_RULE = `.brand-logo {
-  display: block;
-  width: 180px;
-  height: 56px;
-  object-fit: cover;
-  object-position: center;
-  flex-shrink: 0;
+  display: block !important;
+  width: 180px !important;
+  height: 56px !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  flex: 0 0 180px !important;
+  flex-shrink: 0 !important;
 }`;
 const STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE = `.post__header > .brand-logo + .post__badge-dot {
   display: none;
@@ -574,17 +578,12 @@ function ensureStudioLogoSupportCss(input: string) {
   const brandLogoRuleRegex = /\.brand-logo\s*\{[\s\S]*?\}/;
   const hasBrandLogoRule = /\.brand-logo\b/.test(source);
   const hasHeaderDotHideRule = /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(source);
-  const looksLikeLegacyBrandLogoRule =
-    hasBrandLogoRule &&
-    /max-width:\s*176px/.test(source) &&
-    /max-height:\s*56px/.test(source) &&
-    /object-fit:\s*contain/.test(source);
 
   let nextCss = source;
 
   if (!hasBrandLogoRule) {
     nextCss = `${nextCss}\n\n${STUDIO_BRAND_LOGO_CSS_RULE}`;
-  } else if (looksLikeLegacyBrandLogoRule) {
+  } else {
     nextCss = nextCss.replace(brandLogoRuleRegex, STUDIO_BRAND_LOGO_CSS_RULE);
   }
 
@@ -1428,7 +1427,9 @@ export function PostStudio() {
               </label>
               <Textarea
                 className="min-h-[340px] font-mono text-xs leading-5"
-                onChange={(event) => setHtml(sanitizeStructuralHtml(event.target.value))}
+                onChange={(event) =>
+                  setHtml(ensureStudioLogoTagInHtml(sanitizeStructuralHtml(event.target.value)))
+                }
                 spellCheck={false}
                 value={html}
               />
@@ -1440,7 +1441,7 @@ export function PostStudio() {
               </label>
               <Textarea
                 className="min-h-[340px] font-mono text-xs leading-5"
-                onChange={(event) => setCss(event.target.value)}
+                onChange={(event) => setCss(ensureStudioLogoSupportCss(event.target.value))}
                 spellCheck={false}
                 value={css}
               />

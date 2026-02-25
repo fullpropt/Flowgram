@@ -1,9 +1,28 @@
 /* Flowgram Studio - ZapVender Theme (cole no campo CSS do Studio)
- * Compatível com a estrutura neutra padrão (`post__*` classes).
- * Dica: use junto com HTML estrutural (sem `style=""` inline).
+ * Baseado em principios do PDF de referencia:
+ * - leitura por varredura (hook forte na primeira dobra)
+ * - alto contraste
+ * - blocos editoriais claros (comparacao + prova + CTA)
+ * - safe-zone visual (respiro no topo e no rodape)
+ * Compatibilidade: usa classes .post__* e logo em /api/studio/assets/logo
  */
 
 .post {
+  --bg-0: #071528;
+  --bg-1: #0a2133;
+  --bg-2: #0b1e2f;
+  --ink-0: #f7fbff;
+  --ink-1: rgba(230, 244, 255, 0.94);
+  --ink-2: rgba(210, 227, 238, 0.82);
+  --muted: rgba(171, 211, 203, 0.74);
+  --line: rgba(110, 173, 165, 0.16);
+  --line-strong: rgba(110, 173, 165, 0.24);
+  --accent: #22c55e;
+  --accent-soft: #7dffb2;
+  --accent-cyan: #43d2ff;
+  --danger: #ff7a88;
+  --danger-soft: #fecdd3;
+
   width: 100%;
   height: 100%;
   position: relative;
@@ -11,23 +30,23 @@
   box-sizing: border-box;
   border-radius: 28px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  color: #f8fbff;
+  color: var(--ink-0);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   background:
     radial-gradient(circle at 14% 10%, rgba(52, 211, 153, 0.24), transparent 44%),
     radial-gradient(circle at 84% 12%, rgba(37, 211, 102, 0.18), transparent 36%),
-    radial-gradient(circle at 56% 34%, rgba(0, 0, 0, 0.34), transparent 60%),
-    linear-gradient(160deg, #071528 0%, #0a2133 55%, #0b1e2f 100%);
+    radial-gradient(circle at 58% 36%, rgba(0, 0, 0, 0.34), transparent 60%),
+    linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 55%, var(--bg-2) 100%);
 }
 
 .post::before {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at 60% 40%, rgba(0, 0, 0, 0.30), transparent 56%),
-    radial-gradient(circle at 80% 88%, rgba(34, 197, 94, 0.14), transparent 42%);
   pointer-events: none;
+  background:
+    radial-gradient(circle at 60% 38%, rgba(0, 0, 0, 0.28), transparent 56%),
+    radial-gradient(circle at 80% 88%, rgba(34, 197, 94, 0.14), transparent 42%);
 }
 
 .post::after {
@@ -35,12 +54,12 @@
   position: absolute;
   right: -2%;
   bottom: -1%;
-  width: 34%;
+  width: 35%;
   height: 24%;
-  background: linear-gradient(180deg, rgba(134, 239, 172, 0.12), rgba(134, 239, 172, 0.03));
-  clip-path: polygon(32% 0, 100% 0, 100% 100%, 0 100%, 0 72%);
   opacity: 0.95;
   pointer-events: none;
+  clip-path: polygon(32% 0, 100% 0, 100% 100%, 0 100%, 0 72%);
+  background: linear-gradient(180deg, rgba(134, 239, 172, 0.12), rgba(134, 239, 172, 0.03));
 }
 
 .post__glow {
@@ -62,36 +81,61 @@
 .post__glow--b {
   right: -10%;
   bottom: -8%;
-  background: rgba(59, 130, 246, 0.24);
+  background: rgba(67, 210, 255, 0.22);
 }
 
 .post__layer {
   position: relative;
   z-index: 2;
   height: 100%;
-  padding: 56px 52px 46px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  padding: 62px 52px 58px; /* safe-zone visual */
 }
 
 .post__header {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 56px;
 }
 
 .brand-logo {
-  display: block;
-  width: 180px;
-  height: 56px;
-  object-fit: cover;
-  object-position: center;
-  flex-shrink: 0;
+  display: block !important;
+  width: 180px !important;
+  height: 56px !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  flex: 0 0 180px !important;
+  flex-shrink: 0 !important;
 }
 
 .post__header > .brand-logo + .post__badge-dot {
   display: none;
+}
+
+.post__brand {
+  min-width: 0;
+}
+
+.post__tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(67, 210, 255, 0.18);
+  background: linear-gradient(180deg, rgba(67, 210, 255, 0.08), rgba(255, 255, 255, 0.01));
+  color: rgba(219, 246, 255, 0.92);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 12px;
 }
 
 .post__badge-dot {
@@ -109,8 +153,8 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 800;
-  color: rgba(236, 253, 245, 0.94);
   line-height: 1;
+  color: rgba(236, 253, 245, 0.94);
 }
 
 .post__meta {
@@ -122,31 +166,60 @@
 }
 
 .post__hero {
-  margin-top: 30px;
+  margin-top: 2px;
+}
+
+.post__kicker {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(125, 255, 178, 0.92);
 }
 
 .post__title {
   margin: 0;
-  font-size: 88px;
+  max-width: 95%;
+  color: var(--ink-0);
+  font-size: 80px;
   line-height: 0.92;
   letter-spacing: -0.045em;
   font-weight: 800;
-  max-width: 92%;
-  color: #f8fbff;
   text-wrap: balance;
 }
 
 .post__subtitle {
-  margin: 16px 0 0;
-  max-width: 88%;
-  font-size: 29px;
-  line-height: 1.14;
-  font-weight: 500;
-  color: rgba(219, 234, 254, 0.95);
+  margin: 14px 0 0;
+  max-width: 92%;
+  color: var(--ink-1);
+  font-size: 27px;
+  line-height: 1.12;
+  font-weight: 600;
+  text-wrap: pretty;
+}
+
+.post__scanline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.post__chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 22, 35, 0.56);
+  color: rgba(222, 246, 255, 0.86);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 9px 11px;
 }
 
 .post__grid {
-  margin-top: 32px;
+  margin-top: 2px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
@@ -154,33 +227,33 @@
 
 .post__panel {
   border-radius: 20px;
-  min-height: 216px;
-  padding: 16px 16px 14px;
+  min-height: 212px;
+  padding: 15px 16px 14px;
   box-sizing: border-box;
-  backdrop-filter: blur(3px);
-  border: 1px solid rgba(34, 197, 94, 0.16);
+  border: 1px solid var(--line);
   background:
-    linear-gradient(180deg, rgba(34, 197, 94, 0.04), rgba(34, 197, 94, 0.01)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
     rgba(8, 20, 40, 0.58);
+  backdrop-filter: blur(3px);
 }
 
-.post__panel:nth-child(1) {
-  border-color: rgba(248, 113, 113, 0.20);
+.post__panel--warning {
+  border-color: rgba(255, 122, 136, 0.2);
   background:
-    linear-gradient(180deg, rgba(248, 113, 113, 0.07), rgba(248, 113, 113, 0.02)),
+    linear-gradient(180deg, rgba(255, 122, 136, 0.08), rgba(255, 122, 136, 0.02)),
     rgba(8, 20, 40, 0.56);
 }
 
-.post__panel:nth-child(2) {
+.post__panel--success {
   border-color: rgba(34, 197, 94, 0.22);
   background:
-    radial-gradient(circle at 10% 10%, rgba(34, 197, 94, 0.10), transparent 46%),
+    radial-gradient(circle at 12% 12%, rgba(34, 197, 94, 0.1), transparent 48%),
     rgba(8, 20, 40, 0.62);
 }
 
 .post__panel-label {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -188,21 +261,22 @@
   color: rgba(191, 219, 254, 0.74);
 }
 
-.post__panel:nth-child(1) .post__panel-label {
-  color: #fecaca;
+.post__panel--warning .post__panel-label {
+  color: var(--danger-soft);
 }
 
-.post__panel:nth-child(2) .post__panel-label {
+.post__panel--success .post__panel-label {
   color: #bbf7d0;
 }
 
 .post__panel-title {
-  margin: 0 0 9px;
-  font-size: 29px;
+  margin: 0 0 10px;
+  font-size: 28px;
   line-height: 0.96;
   letter-spacing: -0.02em;
   color: #ffffff;
   font-weight: 800;
+  text-wrap: balance;
 }
 
 .post__list {
@@ -216,13 +290,13 @@
 .post__list li {
   position: relative;
   padding-left: 14px;
-  font-size: 18px;
-  line-height: 1.08;
-  font-weight: 500;
   color: #dbeafe;
+  font-size: 17px;
+  line-height: 1.12;
+  font-weight: 500;
 }
 
-.post__panel:nth-child(2) .post__list li {
+.post__panel--success .post__list li {
   color: #d1fae5;
 }
 
@@ -233,44 +307,107 @@
   border-radius: 999px;
   position: absolute;
   left: 0;
-  top: 9px;
+  top: 8px;
   background: rgba(255, 255, 255, 0.65);
 }
 
-.post__panel:nth-child(1) .post__list li::before {
-  background: rgba(248, 113, 113, 0.90);
+.post__panel--warning .post__list li::before {
+  background: rgba(255, 122, 136, 0.95);
 }
 
-.post__panel:nth-child(2) .post__list li::before {
+.post__panel--success .post__list li::before {
   background: rgba(34, 197, 94, 0.95);
+}
+
+.post__proof {
+  margin-top: 2px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(180deg, rgba(67, 210, 255, 0.05), rgba(255, 255, 255, 0)),
+    rgba(8, 16, 28, 0.48);
+  padding: 12px 14px 13px;
+}
+
+.post__proof-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(210, 241, 255, 0.84);
+}
+
+.post__proof-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.post__proof-list li {
+  position: relative;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-1);
+  font-size: 15px;
+  line-height: 1.12;
+  font-weight: 600;
+}
+
+.post__proof-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(125, 255, 178, 0.9);
+  box-shadow: inset 0 0 0 2px rgba(9, 20, 32, 0.95);
 }
 
 .post__footer {
   margin-top: auto;
+  padding-top: 8px;
 }
 
 .post__hook {
   margin: 0;
-  font-size: 58px;
+  max-width: 86%;
+  color: #ffffff;
+  font-size: 56px;
   line-height: 0.92;
   letter-spacing: -0.04em;
   font-weight: 800;
-  color: #ffffff;
-  max-width: 78%;
   text-wrap: balance;
 }
 
 .post__cta {
   margin-top: 10px;
-  font-size: 24px;
-  line-height: 1.08;
-  font-weight: 600;
   color: #d1fae5;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 600;
+  max-width: 88%;
 }
 
 @media (max-width: 900px) {
   .post__layer {
     padding: 34px;
+    gap: 12px;
+  }
+
+  .brand-logo {
+    width: 140px;
+    height: 42px;
+  }
+
+  .post__tag {
+    display: none;
   }
 
   .post__title {
@@ -286,12 +423,17 @@
     grid-template-columns: 1fr;
   }
 
+  .post__panel {
+    min-height: 0;
+  }
+
   .post__panel-title {
     font-size: 24px;
   }
 
-  .post__list li {
-    font-size: 16px;
+  .post__list li,
+  .post__proof-list li {
+    font-size: 15px;
   }
 
   .post__hook {
@@ -300,6 +442,7 @@
   }
 
   .post__cta {
-    font-size: 20px;
+    font-size: 19px;
+    max-width: 100%;
   }
 }
