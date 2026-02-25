@@ -45,7 +45,6 @@ interface StudioAssetsResponse {
   logo: StudioLogoAsset | null;
   references: StudioReferenceAsset[];
   logoUrl: string;
-  logoSnippet: string;
 }
 
 const STUDIO_PRESETS: StudioPreset[] = [
@@ -601,7 +600,6 @@ export function PostStudio() {
   const [logoAsset, setLogoAsset] = useState<StudioLogoAsset | null>(null);
   const [referenceAssets, setReferenceAssets] = useState<StudioReferenceAsset[]>([]);
   const [logoUrl, setLogoUrl] = useState(STUDIO_LOGO_FIXED_URL);
-  const [logoSnippet, setLogoSnippet] = useState(`<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`);
   const [logoRenderNonce, setLogoRenderNonce] = useState(0);
   const logoFileInputId = useId();
   const referencesFileInputId = useId();
@@ -654,11 +652,6 @@ export function PostStudio() {
       setLogoAsset(body.logo ?? null);
       setReferenceAssets(Array.isArray(body.references) ? body.references : []);
       setLogoUrl(typeof body.logoUrl === "string" && body.logoUrl ? body.logoUrl : STUDIO_LOGO_FIXED_URL);
-      setLogoSnippet(
-        typeof body.logoSnippet === "string" && body.logoSnippet
-          ? body.logoSnippet
-          : `<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`,
-      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Falha ao carregar assets do Studio.",
@@ -672,11 +665,6 @@ export function PostStudio() {
     setLogoAsset(body.logo ?? null);
     setReferenceAssets(Array.isArray(body.references) ? body.references : []);
     setLogoUrl(typeof body.logoUrl === "string" && body.logoUrl ? body.logoUrl : STUDIO_LOGO_FIXED_URL);
-    setLogoSnippet(
-      typeof body.logoSnippet === "string" && body.logoSnippet
-        ? body.logoSnippet
-        : `<img src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`,
-    );
   }
 
   async function handleLogoFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -818,8 +806,27 @@ export function PostStudio() {
       return;
     }
 
+    const defaultBrandLogoCss = `
+.brand-logo {
+  display: block;
+  width: auto;
+  max-width: 176px;
+  max-height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}`;
+
+    const cssNeedsBrandLogoRule = !/\.brand-logo\b/.test(css);
+    if (cssNeedsBrandLogoRule) {
+      setCss((currentCss) => `${currentCss.trim()}\n\n${defaultBrandLogoCss}\n`);
+    }
+
     if (html.includes(STUDIO_LOGO_FIXED_URL)) {
-      setSuccessMessage("O HTML atual ja referencia a logo padrao.");
+      setSuccessMessage(
+        cssNeedsBrandLogoRule
+          ? "Logo ja existe no HTML. CSS padrao da logo foi adicionado."
+          : "O HTML atual ja referencia a logo padrao.",
+      );
       return;
     }
 
@@ -1029,9 +1036,6 @@ export function PostStudio() {
               Studio
             </p>
             <h2 className="mt-1 text-xl font-bold text-[var(--foreground)]">Post Builder (HTML + CSS)</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Monte posts estaticos em codigo e baixe como imagem PNG.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1075,8 +1079,8 @@ export function PostStudio() {
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_580px]">
-        <section className="panel-soft p-4 md:p-5">
-          <div className="mb-4 grid gap-3 xl:grid-cols-2">
+        <section className="panel-soft flex flex-col p-4 md:p-5">
+          <div className="order-1 mb-4 grid gap-3 xl:grid-cols-2">
             <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
               <div className="mb-2 flex items-center gap-2">
                 <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
@@ -1222,7 +1226,7 @@ export function PostStudio() {
             </div>
           </div>
 
-          <div className="mb-4 grid gap-3">
+          <div className="order-3 mb-4 mt-4 grid gap-3">
             <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
               <div className="mb-2 flex items-center gap-2">
                 <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
@@ -1232,7 +1236,6 @@ export function PostStudio() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Logo da marca
                   </p>
-                  <p className="text-[11px] text-[var(--muted)]">URL fixa (padrao) para qualquer HTML gerado:</p>
                   <code className="mt-1 block break-all rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(8,6,14,0.42)] px-2 py-1 text-[11px] text-[var(--foreground)]">
                     {logoUrl}
                   </code>
@@ -1262,23 +1265,11 @@ export function PostStudio() {
                     <p className="text-sm font-semibold text-[var(--foreground)]">
                       {isUploadingLogo ? "Enviando logo..." : "Enviar logo da marca"}
                     </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      PNG, JPG, SVG, WEBP ou GIF. A URL continua a mesma.
-                    </p>
                   </div>
                   <span className="shrink-0 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2 py-1 text-[11px] font-semibold text-[var(--foreground)]">
                     Escolher
                   </span>
                 </label>
-
-                <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.45)] p-2">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                    Snippet pronto
-                  </p>
-                  <code className="block break-all whitespace-pre-wrap text-[11px] leading-4 text-[var(--foreground)]">
-                    {logoSnippet}
-                  </code>
-                </div>
 
                 {logoAsset ? (
                   <div className="grid gap-2 rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.38)] p-2">
@@ -1315,10 +1306,7 @@ export function PostStudio() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-xs leading-relaxed text-[var(--muted)]">
-                    Nenhuma logo enviada ainda. Depois do upload, use sempre{" "}
-                    <code className="break-all text-[var(--foreground)]">{logoUrl}</code> no HTML.
-                  </p>
+                  <p className="text-xs text-[var(--muted)]">Sem logo enviada.</p>
                 )}
               </div>
             </div>
@@ -1331,9 +1319,6 @@ export function PostStudio() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     Arquivos de referencia
-                  </p>
-                  <p className="text-[11px] text-[var(--muted)]">
-                    Use para anexar guias, prints, PDFs e materiais para estudo visual.
                   </p>
                 </div>
               </div>
@@ -1361,9 +1346,6 @@ export function PostStudio() {
                     <p className="text-sm font-semibold text-[var(--foreground)]">
                       {isUploadingReferences ? "Enviando arquivos..." : "Adicionar arquivos de referencia"}
                     </p>
-                    <p className="text-xs text-[var(--muted)]">
-                      Selecione varios arquivos (PDF, imagem, texto, etc.) para estudo visual.
-                    </p>
                   </div>
                   <span className="shrink-0 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2 py-1 text-[11px] font-semibold text-[var(--foreground)]">
                     Selecionar
@@ -1383,9 +1365,7 @@ export function PostStudio() {
                   {isLoadingAssets ? (
                     <p className="text-xs text-[var(--muted)]">Carregando arquivos...</p>
                   ) : referenceAssets.length === 0 ? (
-                    <p className="text-xs leading-relaxed text-[var(--muted)]">
-                      Ainda nao ha arquivos. Eles serao salvos localmente no servidor deste projeto.
-                    </p>
+                    <p className="text-xs text-[var(--muted)]">Nenhum arquivo.</p>
                   ) : (
                     <div className="max-h-52 space-y-2 overflow-auto pr-1">
                       {referenceAssets.map((file) => (
@@ -1429,7 +1409,7 @@ export function PostStudio() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="order-2 grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                 HTML (modo estrutural)
@@ -1456,13 +1436,13 @@ export function PostStudio() {
           </div>
 
           {errorMessage ? (
-            <div className="mt-4 rounded-xl border border-[#8a3c58] bg-[rgba(72,20,36,0.35)] px-3 py-2 text-sm text-[#ffd1dd]">
+            <div className="order-4 mt-4 rounded-xl border border-[#8a3c58] bg-[rgba(72,20,36,0.35)] px-3 py-2 text-sm text-[#ffd1dd]">
               {errorMessage}
             </div>
           ) : null}
 
           {successMessage ? (
-            <div className="mt-4 rounded-xl border border-[rgba(25,195,125,0.32)] bg-[rgba(18,56,42,0.32)] px-3 py-2 text-sm text-[#b7f4d9]">
+            <div className="order-5 mt-4 rounded-xl border border-[rgba(25,195,125,0.32)] bg-[rgba(18,56,42,0.32)] px-3 py-2 text-sm text-[#b7f4d9]">
               {successMessage}
             </div>
           ) : null}
@@ -1503,10 +1483,6 @@ export function PostStudio() {
               </div>
             </div>
           </div>
-
-          <p className="mt-3 text-xs leading-relaxed text-[var(--muted)]">
-            Use apenas HTML/CSS estatico. Scripts sao ignorados no preview/export.
-          </p>
         </section>
       </div>
 

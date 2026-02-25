@@ -7,11 +7,29 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function unauthorized() {
-  return NextResponse.json({ message: "Nao autorizado." }, { status: 401 });
+  return NextResponse.json(
+    { message: "Nao autorizado." },
+    {
+      status: 401,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Vary: "Cookie",
+      },
+    },
+  );
 }
 
 function jsonError(message: string, status = 400) {
-  return NextResponse.json({ message }, { status });
+  return NextResponse.json(
+    { message },
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Vary: "Cookie",
+      },
+    },
+  );
 }
 
 function sanitizeHeaderFileName(fileName: string) {
@@ -31,6 +49,7 @@ export async function GET() {
   return new NextResponse(logo.buffer, {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate",
+      Vary: "Cookie",
       "Content-Length": String(logo.size),
       "Content-Type": logo.mimeType,
       "Content-Disposition": `inline; filename="${sanitizeHeaderFileName(logo.fileName)}"`,
