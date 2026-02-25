@@ -66,12 +66,55 @@ const STUDIO_BRAND_LOGO_CSS_RULE = `.brand-logo {
   min-width: 0 !important;
   object-fit: cover !important;
   object-position: center !important;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  z-index: auto !important;
   flex: 0 0 180px !important;
   flex-shrink: 0 !important;
 }`;
 const STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE = `.post__header > .brand-logo + .post__badge-dot {
   display: none;
 }`;
+const STUDIO_CANVAS_LOGO_GUARD_CSS = `
+.studio-canvas-root .post__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.studio-canvas-root .post__header > * {
+  min-width: 0;
+}
+.studio-canvas-root img.brand-logo {
+  display: block !important;
+  width: 180px !important;
+  height: 56px !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+  z-index: auto !important;
+  flex: 0 0 180px !important;
+  flex-shrink: 0 !important;
+}
+.studio-canvas-root .post__header > img.brand-logo + .post__badge-dot {
+  display: none !important;
+}
+`;
 
 const DEFAULT_HTML = `<article class="post">
   <div class="post__glow post__glow--a"></div>
@@ -628,6 +671,7 @@ function StudioCanvas({
           overflow: hidden;
         }
         ${scopedCss}
+        ${STUDIO_CANVAS_LOGO_GUARD_CSS}
       `}</style>
       <div
         className="studio-canvas-root"
