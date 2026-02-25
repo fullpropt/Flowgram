@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { mkdir, readFile, rm, unlink, writeFile } from "fs/promises";
 import path from "path";
+import { prisma } from "@/lib/prisma";
 
 export interface StudioLogoAsset {
   originalName: string;
@@ -19,23 +19,10 @@ export interface StudioReferenceAsset {
   uploadedAt: string;
 }
 
-interface StudioAssetsManifest {
-  logo: StudioLogoAsset | null;
-  references: StudioReferenceAsset[];
-}
-
 export interface StudioAssetsSummary {
   logo: StudioLogoAsset | null;
   references: Array<StudioReferenceAsset & { url: string }>;
   logoUrl: string;
-  logoSnippet: string;
-}
-
-interface StudioUserAssetPaths {
-  rootDir: string;
-  manifestPath: string;
-  logoDir: string;
-  referencesDir: string;
 }
 
 const MAX_LOGO_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -51,27 +38,6 @@ const ALLOWED_LOGO_EXTENSIONS = new Set([
   ".gif",
   ".avif",
 ]);
-
-function defaultManifest(): StudioAssetsManifest {
-  return { logo: null, references: [] };
-}
-
-function getUserAssetPaths(userId: string): StudioUserAssetPaths {
-  const rootDir = path.join(process.cwd(), "storage", "studio-assets", userId);
-  return {
-    rootDir,
-    manifestPath: path.join(rootDir, "manifest.json"),
-    logoDir: path.join(rootDir, "logo"),
-    referencesDir: path.join(rootDir, "references"),
-  };
-}
-
-async function ensureUserAssetDirs(userId: string) {
-  const paths = getUserAssetPaths(userId);
-  await mkdir(paths.logoDir, { recursive: true });
-  await mkdir(paths.referencesDir, { recursive: true });
-  return paths;
-}
 
 function normalizeWhitespace(input: string) {
   return input.replace(/\s+/g, " ").trim();
@@ -111,83 +77,52 @@ function buildSafeReferenceStoredName(id: string, originalName: string) {
   return `${id}-${safeBase}${ext || ".bin"}`;
 }
 
-function sortReferencesNewestFirst(items: StudioReferenceAsset[]) {
-  return [...items].sort((a, b) => {
-    return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
-  });
-}
-
-async function readManifest(userId: string): Promise<StudioAssetsManifest> {
-  const paths = getUserAssetPaths(userId);
-
-  try {
-    const raw = await readFile(paths.manifestPath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<StudioAssetsManifest> | null;
-
-    const logo =
-      parsed?.logo &&
-      typeof parsed.logo === "object" &&
-      typeof parsed.logo.originalName === "string" &&
-      typeof parsed.logo.storedName === "string" &&
-      typeof parsed.logo.mimeType === "string" &&
-      typeof parsed.logo.size === "number" &&
-      typeof parsed.logo.updatedAt === "string"
-        ? parsed.logo
-        : null;
-
-    const references = Array.isArray(parsed?.references)
-      ? parsed.references.filter((item): item is StudioReferenceAsset => {
-          return (
-            Boolean(item) &&
-            typeof item === "object" &&
-            typeof item.id === "string" &&
-            typeof item.originalName === "string" &&
-            typeof item.storedName === "string" &&
-            typeof item.mimeType === "string" &&
-            typeof item.size === "number" &&
-            typeof item.uploadedAt === "string"
-          );
-        })
-      : [];
-
-    return {
-      logo,
-      references: sortReferencesNewestFirst(references),
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-      return defaultManifest();
-    }
-
-    throw error;
-  }
-}
-
-async function writeManifest(userId: string, manifest: StudioAssetsManifest) {
-  const paths = await ensureUserAssetDirs(userId);
-  const nextManifest: StudioAssetsManifest = {
-    logo: manifest.logo,
-    references: sortReferencesNewestFirst(manifest.references),
-  };
-
-  await writeFile(paths.manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`, "utf8");
-}
-
-function fileToSummary(manifest: StudioAssetsManifest): StudioAssetsSummary {
+function toStudioLogoAsset(record: {
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  updatedAt: Date;
+}): StudioLogoAsset {
   return {
-    logo: manifest.logo,
+    originalName: record.originalName,
+    storedName: record.storedName,
+    mimeType: record.mimeType,
+    size: record.size,
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+function toStudioReferenceAsset(record: {
+  id: string;
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: Date;
+}): StudioReferenceAsset {
+  return {
+    id: record.id,
+    originalName: record.originalName,
+    storedName: record.storedName,
+    mimeType: record.mimeType,
+    size: record.size,
+    uploadedAt: record.uploadedAt.toISOString(),
+  };
+}
+
+function toAssetsSummary(input: {
+  logo: StudioLogoAsset | null;
+  references: StudioReferenceAsset[];
+}): StudioAssetsSummary {
+  return {
+    logo: input.logo,
     logoUrl: STUDIO_LOGO_URL,
-    logoSnippet: `<img src="${STUDIO_LOGO_URL}" alt="Logo da marca" />`,
-    references: manifest.references.map((item) => ({
+    references: input.references.map((item) => ({
       ...item,
       url: `/api/studio/assets/references/${encodeURIComponent(item.id)}`,
     })),
   };
-}
-
-export async function getStudioAssetsSummary(userId: string) {
-  const manifest = await readManifest(userId);
-  return fileToSummary(manifest);
 }
 
 function assertLogoFile(file: File) {
@@ -211,51 +146,6 @@ function assertLogoFile(file: File) {
   }
 }
 
-export async function saveStudioLogo(userId: string, file: File) {
-  assertLogoFile(file);
-
-  const paths = await ensureUserAssetDirs(userId);
-  const manifest = await readManifest(userId);
-
-  const originalName = sanitizeFileName(file.name);
-  const ext = inferExtension(originalName, ".bin");
-  const storedName = `logo${ext}`;
-  const targetPath = path.join(paths.logoDir, storedName);
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  if (manifest.logo?.storedName && manifest.logo.storedName !== storedName) {
-    const previousPath = path.join(paths.logoDir, manifest.logo.storedName);
-    await unlink(previousPath).catch(() => undefined);
-  }
-
-  await writeFile(targetPath, buffer);
-
-  manifest.logo = {
-    originalName,
-    storedName,
-    mimeType: sanitizeMimeType(file.type),
-    size: buffer.byteLength,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await writeManifest(userId, manifest);
-  return fileToSummary(manifest);
-}
-
-export async function removeStudioLogo(userId: string) {
-  const paths = await ensureUserAssetDirs(userId);
-  const manifest = await readManifest(userId);
-
-  if (manifest.logo?.storedName) {
-    const targetPath = path.join(paths.logoDir, manifest.logo.storedName);
-    await unlink(targetPath).catch(() => undefined);
-  }
-
-  manifest.logo = null;
-  await writeManifest(userId, manifest);
-  return fileToSummary(manifest);
-}
-
 function assertReferenceFile(file: File) {
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("Arquivo de referencia invalido.");
@@ -270,6 +160,77 @@ function assertReferenceFile(file: File) {
   }
 }
 
+export async function getStudioAssetsSummary(userId: string) {
+  const [logoRecord, referenceRecords] = await Promise.all([
+    prisma.studioLogoAsset.findUnique({
+      where: { userId },
+      select: {
+        originalName: true,
+        storedName: true,
+        mimeType: true,
+        size: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.studioReferenceAsset.findMany({
+      where: { userId },
+      orderBy: { uploadedAt: "desc" },
+      select: {
+        id: true,
+        originalName: true,
+        storedName: true,
+        mimeType: true,
+        size: true,
+        uploadedAt: true,
+      },
+    }),
+  ]);
+
+  return toAssetsSummary({
+    logo: logoRecord ? toStudioLogoAsset(logoRecord) : null,
+    references: referenceRecords.map(toStudioReferenceAsset),
+  });
+}
+
+export async function saveStudioLogo(userId: string, file: File) {
+  assertLogoFile(file);
+
+  const originalName = sanitizeFileName(file.name);
+  const ext = inferExtension(originalName, ".bin");
+  const storedName = `logo${ext}`;
+  const mimeType = sanitizeMimeType(file.type);
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  await prisma.studioLogoAsset.upsert({
+    where: { userId },
+    update: {
+      originalName,
+      storedName,
+      mimeType,
+      size: buffer.byteLength,
+      content: buffer,
+    },
+    create: {
+      userId,
+      originalName,
+      storedName,
+      mimeType,
+      size: buffer.byteLength,
+      content: buffer,
+    },
+  });
+
+  return getStudioAssetsSummary(userId);
+}
+
+export async function removeStudioLogo(userId: string) {
+  await prisma.studioLogoAsset.deleteMany({
+    where: { userId },
+  });
+
+  return getStudioAssetsSummary(userId);
+}
+
 export async function saveStudioReferenceFiles(userId: string, files: File[]) {
   if (!Array.isArray(files) || files.length === 0) {
     throw new Error("Selecione ao menos um arquivo de referencia.");
@@ -280,108 +241,99 @@ export async function saveStudioReferenceFiles(userId: string, files: File[]) {
     throw new Error("Nao ha arquivos validos para enviar.");
   }
 
-  const paths = await ensureUserAssetDirs(userId);
-  const manifest = await readManifest(userId);
+  const payloads = await Promise.all(
+    validFiles.map(async (file) => {
+      assertReferenceFile(file);
+      const id = randomUUID();
+      const originalName = sanitizeFileName(file.name);
+      const storedName = buildSafeReferenceStoredName(id, originalName);
+      const mimeType = sanitizeMimeType(file.type);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-  for (const file of validFiles) {
-    assertReferenceFile(file);
-    const id = randomUUID();
-    const originalName = sanitizeFileName(file.name);
-    const storedName = buildSafeReferenceStoredName(id, originalName);
-    const targetPath = path.join(paths.referencesDir, storedName);
-    const buffer = Buffer.from(await file.arrayBuffer());
+      return {
+        id,
+        userId,
+        originalName,
+        storedName,
+        mimeType,
+        size: buffer.byteLength,
+        content: buffer,
+      };
+    }),
+  );
 
-    await writeFile(targetPath, buffer);
+  await prisma.$transaction(
+    payloads.map((data) =>
+      prisma.studioReferenceAsset.create({
+        data,
+      }),
+    ),
+  );
 
-    manifest.references.push({
-      id,
-      originalName,
-      storedName,
-      mimeType: sanitizeMimeType(file.type),
-      size: buffer.byteLength,
-      uploadedAt: new Date().toISOString(),
-    });
-  }
-
-  manifest.references = sortReferencesNewestFirst(manifest.references);
-  await writeManifest(userId, manifest);
-  return fileToSummary(manifest);
+  return getStudioAssetsSummary(userId);
 }
 
 export async function readStudioLogoFile(userId: string) {
-  const paths = getUserAssetPaths(userId);
-  const manifest = await readManifest(userId);
+  const logo = await prisma.studioLogoAsset.findUnique({
+    where: { userId },
+    select: {
+      originalName: true,
+      mimeType: true,
+      size: true,
+      updatedAt: true,
+      content: true,
+    },
+  });
 
-  if (!manifest.logo?.storedName) {
-    return null;
-  }
+  if (!logo) return null;
 
-  const filePath = path.join(paths.logoDir, manifest.logo.storedName);
-
-  try {
-    const buffer = await readFile(filePath);
-    return {
-      buffer,
-      fileName: manifest.logo.originalName,
-      mimeType: manifest.logo.mimeType || "application/octet-stream",
-      size: manifest.logo.size,
-      updatedAt: manifest.logo.updatedAt,
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-      return null;
-    }
-
-    throw error;
-  }
+  return {
+    buffer: Buffer.from(logo.content),
+    fileName: logo.originalName,
+    mimeType: logo.mimeType || "application/octet-stream",
+    size: logo.size,
+    updatedAt: logo.updatedAt.toISOString(),
+  };
 }
 
 export async function readStudioReferenceFile(userId: string, id: string) {
-  const paths = getUserAssetPaths(userId);
-  const manifest = await readManifest(userId);
-  const reference = manifest.references.find((item) => item.id === id);
+  const file = await prisma.studioReferenceAsset.findFirst({
+    where: { id, userId },
+    select: {
+      originalName: true,
+      mimeType: true,
+      size: true,
+      uploadedAt: true,
+      content: true,
+    },
+  });
 
-  if (!reference) return null;
+  if (!file) return null;
 
-  const filePath = path.join(paths.referencesDir, reference.storedName);
-
-  try {
-    const buffer = await readFile(filePath);
-    return {
-      buffer,
-      fileName: reference.originalName,
-      mimeType: reference.mimeType || "application/octet-stream",
-      size: reference.size,
-      uploadedAt: reference.uploadedAt,
-    };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-      return null;
-    }
-
-    throw error;
-  }
+  return {
+    buffer: Buffer.from(file.content),
+    fileName: file.originalName,
+    mimeType: file.mimeType || "application/octet-stream",
+    size: file.size,
+    uploadedAt: file.uploadedAt.toISOString(),
+  };
 }
 
 export async function deleteStudioReferenceFile(userId: string, id: string) {
-  const paths = await ensureUserAssetDirs(userId);
-  const manifest = await readManifest(userId);
-  const reference = manifest.references.find((item) => item.id === id);
+  const result = await prisma.studioReferenceAsset.deleteMany({
+    where: { id, userId },
+  });
 
-  if (!reference) {
+  if (result.count === 0) {
     throw new Error("Arquivo de referencia nao encontrado.");
   }
 
-  const filePath = path.join(paths.referencesDir, reference.storedName);
-  await unlink(filePath).catch(() => undefined);
-
-  manifest.references = manifest.references.filter((item) => item.id !== id);
-  await writeManifest(userId, manifest);
-
-  return fileToSummary(manifest);
+  return getStudioAssetsSummary(userId);
 }
 
 export async function removeAllStudioAssetsForUser(userId: string) {
-  const paths = getUserAssetPaths(userId);
-  await rm(paths.rootDir, { force: true, recursive: true }).catch(() => undefined);
+  await prisma.$transaction([
+    prisma.studioReferenceAsset.deleteMany({ where: { userId } }),
+    prisma.studioLogoAsset.deleteMany({ where: { userId } }),
+  ]);
 }

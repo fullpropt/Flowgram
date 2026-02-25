@@ -56,6 +56,18 @@ const STUDIO_PRESETS: StudioPreset[] = [
 const STUDIO_HTML_LIBRARY_KEY = "flowgram-lab:studio:html-library:v1";
 const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
 const STUDIO_LOGO_FIXED_URL = "/api/studio/assets/logo";
+const STUDIO_LOGO_HTML_TAG = `<img class="brand-logo" src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`;
+const STUDIO_BRAND_LOGO_CSS_RULE = `.brand-logo {
+  display: block;
+  width: 180px;
+  height: 56px;
+  object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
+}`;
+const STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE = `.post__header > .brand-logo + .post__badge-dot {
+  display: none;
+}`;
 
 const DEFAULT_HTML = `<article class="post">
   <div class="post__glow post__glow--a"></div>
@@ -63,6 +75,7 @@ const DEFAULT_HTML = `<article class="post">
 
   <div class="post__layer">
     <header class="post__header">
+      ${STUDIO_LOGO_HTML_TAG}
       <div class="post__badge-dot"></div>
       <div>
         <p class="post__eyebrow">Tema do Post</p>
@@ -157,6 +170,10 @@ const DEFAULT_CSS = `.post {
   align-items: center;
   gap: 12px;
 }
+
+${STUDIO_BRAND_LOGO_CSS_RULE}
+
+${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}
 
 .post__badge-dot {
   width: 16px;
@@ -537,6 +554,47 @@ async function readApiErrorMessage(response: Response, fallbackMessage: string) 
   return fallbackMessage;
 }
 
+function ensureStudioLogoTagInHtml(input: string) {
+  if (!input.trim()) return STUDIO_LOGO_HTML_TAG;
+  if (input.includes(STUDIO_LOGO_FIXED_URL)) return input;
+
+  if (/<header\b/i.test(input)) {
+    return input.replace(/(<header\b[^>]*>)/i, `$1\n      ${STUDIO_LOGO_HTML_TAG}`);
+  }
+
+  return `${STUDIO_LOGO_HTML_TAG}\n${input}`;
+}
+
+function ensureStudioLogoSupportCss(input: string) {
+  const source = input.trim();
+  if (!source) {
+    return `${STUDIO_BRAND_LOGO_CSS_RULE}\n\n${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}\n`;
+  }
+
+  const brandLogoRuleRegex = /\.brand-logo\s*\{[\s\S]*?\}/;
+  const hasBrandLogoRule = /\.brand-logo\b/.test(source);
+  const hasHeaderDotHideRule = /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(source);
+  const looksLikeLegacyBrandLogoRule =
+    hasBrandLogoRule &&
+    /max-width:\s*176px/.test(source) &&
+    /max-height:\s*56px/.test(source) &&
+    /object-fit:\s*contain/.test(source);
+
+  let nextCss = source;
+
+  if (!hasBrandLogoRule) {
+    nextCss = `${nextCss}\n\n${STUDIO_BRAND_LOGO_CSS_RULE}`;
+  } else if (looksLikeLegacyBrandLogoRule) {
+    nextCss = nextCss.replace(brandLogoRuleRegex, STUDIO_BRAND_LOGO_CSS_RULE);
+  }
+
+  if (!hasHeaderDotHideRule) {
+    nextCss = `${nextCss}\n\n${STUDIO_BRAND_LOGO_HIDE_DOT_CSS_RULE}`;
+  }
+
+  return `${nextCss.trim()}\n`;
+}
+
 function StudioCanvas({
   html,
   css,
@@ -691,8 +749,10 @@ export function PostStudio() {
 
       const body = (await response.json()) as StudioAssetsResponse;
       applyStudioAssetsResponse(body);
+      setHtml((currentHtml) => ensureStudioLogoTagInHtml(currentHtml));
+      setCss((currentCss) => ensureStudioLogoSupportCss(currentCss));
       setLogoRenderNonce((value) => value + 1);
-      setSuccessMessage("Logo enviada. Use a URL fixa no HTML para reaproveitar automaticamente.");
+      setSuccessMessage("Logo enviada. O HTML usa a URL fixa automaticamente.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Falha ao enviar logo.");
     } finally {
@@ -795,88 +855,6 @@ export function PostStudio() {
     } finally {
       setRemovingReferenceId(null);
     }
-  }
-
-  function insertLogoTagIntoHtml() {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    if (!logoAsset) {
-      setErrorMessage("Envie uma logo antes de inserir a tag no HTML.");
-      return;
-    }
-
-    const brandLogoCssRule = `
-.brand-logo {
-  display: block;
-  width: 180px;
-  height: 56px;
-  object-fit: cover;
-  object-position: center;
-  flex-shrink: 0;
-}`;
-    const headerLogoDotHideCssRule = `.post__header > .brand-logo + .post__badge-dot {
-  display: none;
-}`;
-
-    const brandLogoRuleRegex = /\.brand-logo\s*\{[\s\S]*?\}/;
-
-    const cssHasBrandLogoRule = /\.brand-logo\b/.test(css);
-    const cssHasHeaderDotHideRule = /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(css);
-    const cssLooksLikeLegacyBrandLogoRule =
-      cssHasBrandLogoRule &&
-      /max-width:\s*176px/.test(css) &&
-      /max-height:\s*56px/.test(css) &&
-      /object-fit:\s*contain/.test(css);
-
-    const cssNeedsBrandLogoRule = !cssHasBrandLogoRule;
-    const cssNeedsHeaderDotHideRule = !cssHasHeaderDotHideRule;
-    const shouldUpgradeLegacyBrandLogoRule = cssLooksLikeLegacyBrandLogoRule;
-
-    if (cssNeedsBrandLogoRule || cssNeedsHeaderDotHideRule || shouldUpgradeLegacyBrandLogoRule) {
-      setCss((currentCss) => {
-        let nextCss = currentCss.trim();
-        const currentHasBrandLogoRule = /\.brand-logo\b/.test(nextCss);
-        const currentHasHeaderDotRule =
-          /\.post__header\s*>\s*\.brand-logo\s*\+\s*\.post__badge-dot\b/.test(nextCss);
-        const currentLooksLegacy =
-          currentHasBrandLogoRule &&
-          /max-width:\s*176px/.test(nextCss) &&
-          /max-height:\s*56px/.test(nextCss) &&
-          /object-fit:\s*contain/.test(nextCss);
-
-        if (!currentHasBrandLogoRule) {
-          nextCss = `${nextCss}\n\n${brandLogoCssRule}`;
-        } else if (currentLooksLegacy) {
-          nextCss = nextCss.replace(brandLogoRuleRegex, brandLogoCssRule);
-        }
-
-        if (!currentHasHeaderDotRule) {
-          nextCss = `${nextCss}\n\n${headerLogoDotHideCssRule}`;
-        }
-
-        return `${nextCss.trim()}\n`;
-      });
-    }
-
-    if (html.includes(STUDIO_LOGO_FIXED_URL)) {
-      setSuccessMessage(
-        cssNeedsBrandLogoRule || cssNeedsHeaderDotHideRule || shouldUpgradeLegacyBrandLogoRule
-          ? "Logo ja existe no HTML. CSS da logo foi ajustado."
-          : "O HTML atual ja referencia a logo padrao.",
-      );
-      return;
-    }
-
-    const logoTag = `<img class="brand-logo" src="${STUDIO_LOGO_FIXED_URL}" alt="Logo da marca" />`;
-
-    if (/<header\b/i.test(html)) {
-      setHtml((currentHtml) => currentHtml.replace(/(<header\b[^>]*>)/i, `$1\n      ${logoTag}`));
-    } else {
-      setHtml((currentHtml) => `${logoTag}\n${currentHtml}`);
-    }
-
-    setSuccessMessage("Tag da logo inserida no HTML.");
   }
 
   function promptAndSaveLibraryEntry(kind: "html" | "css") {
@@ -1097,8 +1075,8 @@ export function PostStudio() {
             <Button
               className="self-center"
               onClick={() => {
-                setHtml(DEFAULT_HTML);
-                setCss(DEFAULT_CSS);
+                setHtml(ensureStudioLogoTagInHtml(DEFAULT_HTML));
+                setCss(ensureStudioLogoSupportCss(DEFAULT_CSS));
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
@@ -1143,7 +1121,7 @@ export function PostStudio() {
                       const found = htmlLibrary.find((item) => item.id === nextId);
                       if (!found) return;
 
-                      setHtml(sanitizeStructuralHtml(found.content));
+                      setHtml(ensureStudioLogoTagInHtml(sanitizeStructuralHtml(found.content)));
                       setErrorMessage(null);
                       setSuccessMessage("Estrutura carregada.");
                     }}
@@ -1215,7 +1193,7 @@ export function PostStudio() {
                       const found = cssLibrary.find((item) => item.id === nextId);
                       if (!found) return;
 
-                      setCss(found.content);
+                      setCss(ensureStudioLogoSupportCss(found.content));
                       setErrorMessage(null);
                       setSuccessMessage("Estilo carregado.");
                     }}
@@ -1338,10 +1316,6 @@ export function PostStudio() {
                         src={`${logoUrl}?v=${encodeURIComponent(logoAsset.updatedAt)}`}
                       />
                     </div>
-
-                    <Button onClick={insertLogoTagIntoHtml} size="sm" variant="outline">
-                      Inserir tag da logo no HTML
-                    </Button>
                   </div>
                 ) : (
                   <p className="text-xs text-[var(--muted)]">Sem logo enviada.</p>

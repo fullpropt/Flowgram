@@ -8,15 +8,17 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  ideaCards    IdeaCard[]
-  calendarPosts CalendarPost[]
-  trashedIdeaCards TrashedIdeaCard[]
+  id                   String                  @id @default(cuid())
+  email                String                  @unique
+  passwordHash         String
+  name                 String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  ideaCards            IdeaCard[]
+  calendarPosts        CalendarPost[]
+  trashedIdeaCards     TrashedIdeaCard[]
+  studioLogoAsset      StudioLogoAsset?
+  studioReferenceAssets StudioReferenceAsset[]
 }
 
 model IdeaCard {
@@ -64,4 +66,33 @@ model TrashedIdeaCard {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model StudioLogoAsset {
+  id         String   @id @default(cuid())
+  userId      String   @unique
+  originalName String
+  storedName  String
+  mimeType    String
+  size        Int
+  content     Bytes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudioReferenceAsset {
+  id          String   @id
+  userId      String
+  originalName String
+  storedName  String
+  mimeType    String
+  size        Int
+  content     Bytes
+  uploadedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([uploadedAt])
 }
