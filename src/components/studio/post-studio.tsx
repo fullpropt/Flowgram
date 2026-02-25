@@ -11,6 +11,7 @@ type StudioPresetKey = "feedPortrait" | "feedSquare" | "story";
 type StudioHtmlLayerKey = "background" | "content" | "overlay";
 type StudioLibraryKind = StudioHtmlLayerKey | "css";
 type StudioPanelKey = StudioHtmlLayerKey | "css" | "logo" | "references";
+type StudioModalKind = StudioLibraryKind | "composition";
 
 interface StudioPreset {
   key: StudioPresetKey;
@@ -23,6 +24,13 @@ interface StudioLibraryItem {
   id: string;
   name: string;
   content: string;
+  updatedAt: number;
+}
+
+interface StudioCompositionItem {
+  id: string;
+  name: string;
+  layerIds: StudioHtmlLayerSelections;
   updatedAt: number;
 }
 
@@ -73,6 +81,7 @@ const STUDIO_HTML_BACKGROUND_LIBRARY_KEY = "flowgram-lab:studio:html-background-
 const STUDIO_HTML_CONTENT_LIBRARY_KEY = "flowgram-lab:studio:html-content-library:v1";
 const STUDIO_HTML_OVERLAY_LIBRARY_KEY = "flowgram-lab:studio:html-overlay-library:v1";
 const STUDIO_CSS_LIBRARY_KEY = "flowgram-lab:studio:css-library:v1";
+const STUDIO_COMPOSITION_LIBRARY_KEY = "flowgram-lab:studio:composition-library:v1";
 const STUDIO_LOGO_FIXED_URL = "/api/studio/assets/logo";
 const STUDIO_HTML_LAYER_CONFIGS: StudioHtmlLayerConfig[] = [
   {
@@ -539,6 +548,55 @@ function writeLibraryItems(storageKey: string, items: StudioLibraryItem[]) {
   window.localStorage.setItem(storageKey, JSON.stringify(items));
 }
 
+function readCompositionItems(storageKey: string): StudioCompositionItem[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((item): item is StudioCompositionItem => {
+        if (!item || typeof item !== "object") return false;
+        if (
+          typeof item.id !== "string" ||
+          typeof item.name !== "string" ||
+          typeof item.updatedAt !== "number" ||
+          !item.layerIds ||
+          typeof item.layerIds !== "object"
+        ) {
+          return false;
+        }
+
+        return (
+          typeof item.layerIds.background === "string" &&
+          typeof item.layerIds.content === "string" &&
+          typeof item.layerIds.overlay === "string"
+        );
+      })
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch {
+    return [];
+  }
+}
+
+function writeCompositionItems(storageKey: string, items: StudioCompositionItem[]) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(storageKey, JSON.stringify(items));
+}
+
+function cloneHtmlLayerSelections(source: StudioHtmlLayerSelections): StudioHtmlLayerSelections {
+  return {
+    background: source.background,
+    content: source.content,
+    overlay: source.overlay,
+  };
+}
+
 function createEmptyHtmlLayerLibraries(): StudioHtmlLayerLibraries {
   return {
     background: [],
@@ -856,10 +914,13 @@ export function PostStudio() {
     createEmptyHtmlLayerLibraries,
   );
   const [cssLibrary, setCssLibrary] = useState<StudioLibraryItem[]>([]);
+  const [compositionLibrary, setCompositionLibrary] = useState<StudioCompositionItem[]>([]);
   const [selectedHtmlLayerIds, setSelectedHtmlLayerIds] = useState<StudioHtmlLayerSelections>(
     createEmptyHtmlLayerSelections,
   );
   const [selectedCssId, setSelectedCssId] = useState("");
+  const [selectedCompositionId, setSelectedCompositionId] = useState("");
+  const [activeModalKind, setActiveModalKind] = useState<StudioModalKind | null>(null);
   const [librariesHydrated, setLibrariesHydrated] = useState(false);
   const [logoAsset, setLogoAsset] = useState<StudioLogoAsset | null>(null);
   const [referenceAssets, setReferenceAssets] = useState<StudioReferenceAsset[]>([]);
@@ -900,6 +961,7 @@ export function PostStudio() {
 
     setHtmlLayerLibraries(nextHtmlLibraries);
     setCssLibrary(readLibraryItems(STUDIO_CSS_LIBRARY_KEY));
+    setCompositionLibrary(readCompositionItems(STUDIO_COMPOSITION_LIBRARY_KEY));
     setLibrariesHydrated(true);
     void loadStudioAssets();
   }, []);
@@ -915,6 +977,11 @@ export function PostStudio() {
     if (!librariesHydrated) return;
     writeLibraryItems(STUDIO_CSS_LIBRARY_KEY, cssLibrary);
   }, [cssLibrary, librariesHydrated]);
+
+  useEffect(() => {
+    if (!librariesHydrated) return;
+    writeCompositionItems(STUDIO_COMPOSITION_LIBRARY_KEY, compositionLibrary);
+  }, [compositionLibrary, librariesHydrated]);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -1115,6 +1182,7 @@ export function PostStudio() {
   }
 
   function setHtmlLayerContent(layerKey: StudioHtmlLayerKey, value: string) {
+    setSelectedCompositionId("");
     setHtmlLayers((prev) => ({ ...prev, [layerKey]: sanitizeStructuralHtml(value) }));
   }
 
@@ -1161,6 +1229,10 @@ export function PostStudio() {
   }
 
   function loadSelectedLibraryEntry(kind: StudioLibraryKind, nextId: string) {
+    if (kind !== "css") {
+      setSelectedCompositionId("");
+    }
+
     setSelectedLibraryIdForKind(kind, nextId);
     if (!nextId) return;
 
@@ -1325,6 +1397,252 @@ export function PostStudio() {
     setSuccessMessage(`${labels.singularTitle} ${labels.pastRemoved}.`);
   }
 
+  function getSelectedLibraryName(kind: StudioLibraryKind) {
+    const selectedId = getSelectedLibraryIdForKind(kind);
+    if (!selectedId) return "Sem template";
+
+    const found = getLibraryItemsForKind(kind).find((item) => item.id === selectedId);
+    return found?.name ?? "Template ausente";
+  }
+
+  function getSelectedCompositionName() {
+    if (!selectedCompositionId) return "Sem conjunto";
+    const found = compositionLibrary.find((item) => item.id === selectedCompositionId);
+    return found?.name ?? "Conjunto ausente";
+  }
+
+  function openLibraryModal(kind: StudioModalKind) {
+    setActiveModalKind(kind);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  }
+
+  function closeLibraryModal() {
+    setActiveModalKind(null);
+  }
+
+  function loadCompositionEntry(nextId: string) {
+    setSelectedCompositionId(nextId);
+    if (!nextId) return;
+
+    const composition = compositionLibrary.find((item) => item.id === nextId);
+    if (!composition) return;
+
+    const nextSelectedLayerIds = cloneHtmlLayerSelections(composition.layerIds);
+    const missingLayers: string[] = [];
+
+    setSelectedHtmlLayerIds(nextSelectedLayerIds);
+    setHtmlLayers((prev) => {
+      const next = { ...prev };
+
+      for (const layer of STUDIO_HTML_LAYER_CONFIGS) {
+        const targetId = nextSelectedLayerIds[layer.key];
+        if (!targetId) {
+          next[layer.key] = DEFAULT_HTML_LAYERS[layer.key];
+          continue;
+        }
+
+        const found = htmlLayerLibraries[layer.key].find((item) => item.id === targetId);
+        if (!found) {
+          missingLayers.push(layer.shortLabel);
+          continue;
+        }
+
+        next[layer.key] = sanitizeStructuralHtml(found.content);
+      }
+
+      return next;
+    });
+
+    if (missingLayers.length > 0) {
+      setErrorMessage(`Templates ausentes no conjunto: ${missingLayers.join(", ")}.`);
+    } else {
+      setErrorMessage(null);
+    }
+
+    setSuccessMessage("Conjunto carregado.");
+  }
+
+  function promptAndSaveCompositionEntry() {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const hasAnyLayerSelected = Object.values(selectedHtmlLayerIds).some((value) => value.trim().length > 0);
+    if (!hasAnyLayerSelected) {
+      setErrorMessage("Selecione pelo menos um template HTML para salvar o conjunto.");
+      return;
+    }
+
+    const selectedItem = compositionLibrary.find((item) => item.id === selectedCompositionId);
+    const defaultName = selectedItem
+      ? `${selectedItem.name} copia`
+      : `Conjunto ${compositionLibrary.length + 1}`;
+    const rawName = window.prompt("Nome do conjunto (HTML)", defaultName);
+    if (rawName === null) return;
+
+    const name = rawName.trim();
+    if (!name) {
+      setErrorMessage("Informe um nome para o conjunto.");
+      return;
+    }
+
+    const existing = compositionLibrary.find((item) => item.name.toLowerCase() === name.toLowerCase());
+    const updatedItem: StudioCompositionItem = existing
+      ? {
+          ...existing,
+          name,
+          layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+          updatedAt: Date.now(),
+        }
+      : {
+          id: createLibraryItemId(),
+          name,
+          layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+          updatedAt: Date.now(),
+        };
+
+    const nextItems = [updatedItem, ...compositionLibrary.filter((item) => item.id !== updatedItem.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+
+    setCompositionLibrary(nextItems);
+    setSelectedCompositionId(updatedItem.id);
+    setSuccessMessage("Conjunto salvo.");
+  }
+
+  function saveChangesToSelectedCompositionEntry() {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const current = compositionLibrary.find((item) => item.id === selectedCompositionId);
+    if (!current) {
+      setErrorMessage("Selecione um conjunto para salvar alteracoes.");
+      return;
+    }
+
+    const updated: StudioCompositionItem = {
+      ...current,
+      layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+      updatedAt: Date.now(),
+    };
+    const nextItems = [updated, ...compositionLibrary.filter((item) => item.id !== current.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+    setCompositionLibrary(nextItems);
+    setSuccessMessage("Conjunto salvo no item selecionado.");
+  }
+
+  function updateSelectedCompositionEntry() {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const current = compositionLibrary.find((item) => item.id === selectedCompositionId);
+    if (!current) {
+      setErrorMessage("Selecione um conjunto para editar.");
+      return;
+    }
+
+    const rawName = window.prompt("Editar nome do conjunto (HTML)", current.name);
+    if (rawName === null) return;
+
+    const nextName = rawName.trim();
+    if (!nextName) {
+      setErrorMessage("Informe um nome para o conjunto.");
+      return;
+    }
+
+    const duplicate = compositionLibrary.find(
+      (item) => item.id !== current.id && item.name.toLowerCase() === nextName.toLowerCase(),
+    );
+    if (duplicate) {
+      setErrorMessage("Ja existe um conjunto com esse nome.");
+      return;
+    }
+
+    const updated: StudioCompositionItem = {
+      ...current,
+      name: nextName,
+      layerIds: cloneHtmlLayerSelections(selectedHtmlLayerIds),
+      updatedAt: Date.now(),
+    };
+    const nextItems = [updated, ...compositionLibrary.filter((item) => item.id !== current.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+    setCompositionLibrary(nextItems);
+    setSuccessMessage("Conjunto atualizado.");
+  }
+
+  function removeSelectedCompositionEntry() {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const current = compositionLibrary.find((item) => item.id === selectedCompositionId);
+    if (!current) {
+      setErrorMessage("Selecione um conjunto para excluir.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Excluir o conjunto "${current.name}" da biblioteca?`);
+    if (!confirmed) return;
+
+    setCompositionLibrary(compositionLibrary.filter((item) => item.id !== current.id));
+    setSelectedCompositionId("");
+    setSuccessMessage("Conjunto removido.");
+  }
+
+  function getModalTitle(kind: StudioModalKind | null) {
+    if (!kind) return "";
+    if (kind === "composition") return "Conjuntos (HTML)";
+    if (kind === "css") return "Estilos (CSS)";
+    return `${getLayerConfig(kind).label}`;
+  }
+
+  function handleModalSelect(itemId: string) {
+    if (!activeModalKind) return;
+    if (activeModalKind === "composition") {
+      loadCompositionEntry(itemId);
+      return;
+    }
+
+    loadSelectedLibraryEntry(activeModalKind, itemId);
+  }
+
+  function handleModalCreate() {
+    if (!activeModalKind) return;
+    if (activeModalKind === "composition") {
+      promptAndSaveCompositionEntry();
+      return;
+    }
+    promptAndSaveLibraryEntry(activeModalKind);
+  }
+
+  function handleModalSaveCurrent() {
+    if (!activeModalKind) return;
+    if (activeModalKind === "composition") {
+      saveChangesToSelectedCompositionEntry();
+      return;
+    }
+    saveChangesToSelectedLibraryEntry(activeModalKind);
+  }
+
+  function handleModalRename() {
+    if (!activeModalKind) return;
+    if (activeModalKind === "composition") {
+      updateSelectedCompositionEntry();
+      return;
+    }
+    updateSelectedLibraryEntry(activeModalKind);
+  }
+
+  function handleModalDelete() {
+    if (!activeModalKind) return;
+    if (activeModalKind === "composition") {
+      removeSelectedCompositionEntry();
+      return;
+    }
+    removeSelectedLibraryEntry(activeModalKind);
+  }
+
   async function handleDownloadPng() {
     if (!exportRef.current) return;
     setErrorMessage(null);
@@ -1364,6 +1682,19 @@ export function PostStudio() {
     }
   }
 
+  const modalItems =
+    activeModalKind === null
+      ? []
+      : activeModalKind === "composition"
+        ? compositionLibrary
+        : getLibraryItemsForKind(activeModalKind);
+  const modalSelectedId =
+    activeModalKind === null
+      ? ""
+      : activeModalKind === "composition"
+        ? selectedCompositionId
+        : getSelectedLibraryIdForKind(activeModalKind);
+
   return (
     <div className="space-y-4">
       <section className="panel p-4 md:p-5">
@@ -1398,6 +1729,9 @@ export function PostStudio() {
               onClick={() => {
                 setHtmlLayers(DEFAULT_HTML_LAYERS);
                 setCss(DEFAULT_CSS);
+                setSelectedHtmlLayerIds(createEmptyHtmlLayerSelections());
+                setSelectedCssId("");
+                setSelectedCompositionId("");
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
@@ -1417,143 +1751,45 @@ export function PostStudio() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_580px]">
         <section className="panel-soft flex flex-col p-4 md:p-5">
-          <div className="order-1 mb-4 grid gap-3 md:grid-cols-2">
-            {STUDIO_HTML_LAYER_CONFIGS.map((layer) => (
-              <div
-                className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3"
-                key={layer.key}
-              >
-                <div className="mb-2 flex items-center gap-2">
+          <div className="order-1 mb-4">
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)] px-3 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
                     <FolderOpen className="h-4 w-4" />
                   </div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                    {layer.label}
-                  </p>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                    Conjunto (HTML)
+                  </span>
                 </div>
 
-                <div className="grid gap-2">
-                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
-                    <select
-                      className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-                      onChange={(event) => loadSelectedLibraryEntry(layer.key, event.target.value)}
-                      value={selectedHtmlLayerIds[layer.key]}
-                    >
-                      <option value="">{layer.emptyLabel}</option>
-                      {htmlLayerLibraries[layer.key].map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <Button
-                      onClick={() => promptAndSaveLibraryEntry(layer.key)}
-                      size="icon"
-                      title={`Salvar nova camada ${layer.shortLabel.toLowerCase()}`}
-                      variant="secondary"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      onClick={() => saveChangesToSelectedLibraryEntry(layer.key)}
-                      size="icon"
-                      title={`Salvar alteracoes na camada ${layer.shortLabel.toLowerCase()} selecionada`}
-                      variant="outline"
-                    >
-                      <Save className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      onClick={() => updateSelectedLibraryEntry(layer.key)}
-                      size="icon"
-                      title={`Renomear camada ${layer.shortLabel.toLowerCase()} selecionada`}
-                      variant="outline"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-
-                    <Button onClick={() => removeSelectedLibraryEntry(layer.key)} size="sm" variant="ghost">
-                      <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
-                  <Save className="h-4 w-4" />
-                </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                  CSS
-                </p>
-              </div>
-
-              <div className="grid gap-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
-                  <select
-                    className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
-                    onChange={(event) => loadSelectedLibraryEntry("css", event.target.value)}
-                    value={selectedCssId}
-                  >
-                    <option value="">Selecione um estilo salvo</option>
-                    {cssLibrary.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <Button onClick={() => promptAndSaveLibraryEntry("css")} size="icon" title="Salvar novo estilo" variant="secondary">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    onClick={() => saveChangesToSelectedLibraryEntry("css")}
-                    size="icon"
-                    title="Salvar alteracoes no estilo selecionado"
-                    variant="outline"
-                  >
-                    <Save className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    onClick={() => updateSelectedLibraryEntry("css")}
-                    size="icon"
-                    title="Renomear estilo selecionado"
-                    variant="outline"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-
-                  <Button onClick={() => removeSelectedLibraryEntry("css")} size="sm" variant="ghost">
-                    <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
-                  </Button>
-                </div>
+                <button
+                  className="min-w-0 max-w-full truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                  onClick={() => openLibraryModal("composition")}
+                  type="button"
+                >
+                  {getSelectedCompositionName()}
+                </button>
               </div>
             </div>
           </div>
 
           <div className="order-3 mb-4 mt-4 grid gap-3">
-            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
-                  <FolderOpen className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                    Logo da marca
-                  </p>
-                  <code className="mt-1 block break-all rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(8,6,14,0.42)] px-2 py-1 text-[11px] text-[var(--foreground)]">
-                    {logoUrl}
-                  </code>
-                </div>
-              </div>
+            <details
+              className="group rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)]"
+              onToggle={(event) => handlePanelToggle("logo", (event.currentTarget as HTMLDetailsElement).open)}
+              open={openPanels.logo}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 marker:hidden">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                  Logo da marca
+                </span>
+                <code className="max-w-[70%] truncate rounded-lg border border-[rgba(255,255,255,0.05)] bg-[rgba(8,6,14,0.42)] px-2 py-1 text-[11px] text-[var(--foreground)]">
+                  {logoUrl}
+                </code>
+              </summary>
 
-              <div className="grid gap-3">
+              <div className="grid gap-3 px-3 pb-3">
                 <input
                   accept="image/*,.svg"
                   className="sr-only"
@@ -1616,21 +1852,25 @@ export function PostStudio() {
                   <p className="text-xs text-[var(--muted)]">Sem logo enviada.</p>
                 )}
               </div>
-            </div>
+            </details>
 
-            <div className="rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.7)] p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-1.5 text-[var(--muted-soft)]">
-                  <Save className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                    Arquivos de referencia
-                  </p>
-                </div>
-              </div>
+            <details
+              className="group rounded-xl border border-[var(--border)] bg-[rgba(15,10,28,0.64)]"
+              onToggle={(event) =>
+                handlePanelToggle("references", (event.currentTarget as HTMLDetailsElement).open)
+              }
+              open={openPanels.references}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 marker:hidden">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
+                  Arquivos de referencia
+                </span>
+                <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--foreground)]">
+                  {referenceAssets.length}
+                </span>
+              </summary>
 
-              <div className="grid gap-3">
+              <div className="grid gap-3 px-3 pb-3">
                 <input
                   className="sr-only"
                   disabled={isUploadingReferences}
@@ -1660,15 +1900,6 @@ export function PostStudio() {
                 </label>
 
                 <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.38)] p-2">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
-                      Arquivos enviados
-                    </p>
-                    <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--foreground)]">
-                      {referenceAssets.length}
-                    </span>
-                  </div>
-
                   {isLoadingAssets ? (
                     <p className="text-xs text-[var(--muted)]">Carregando arquivos...</p>
                   ) : referenceAssets.length === 0 ? (
@@ -1713,7 +1944,7 @@ export function PostStudio() {
                   )}
                 </div>
               </div>
-            </div>
+            </details>
           </div>
 
           <div className="order-2 grid gap-3">
@@ -1730,9 +1961,17 @@ export function PostStudio() {
                   <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                     {layer.label}
                   </span>
-                  <span className="text-[11px] text-[var(--muted)]">
-                    {openPanels[layer.key] ? "Ocultar" : "Expandir"}
-                  </span>
+                  <button
+                    className="min-w-0 max-w-[68%] truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openLibraryModal(layer.key);
+                    }}
+                    type="button"
+                  >
+                    {getSelectedLibraryName(layer.key)}
+                  </button>
                 </summary>
 
                 <div className="px-3 pb-3">
@@ -1758,9 +1997,17 @@ export function PostStudio() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-soft)]">
                   CSS
                 </span>
-                <span className="text-[11px] text-[var(--muted)]">
-                  {openPanels.css ? "Ocultar" : "Expandir"}
-                </span>
+                <button
+                  className="min-w-0 max-w-[68%] truncate rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1 text-sm text-[var(--foreground)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openLibraryModal("css");
+                  }}
+                  type="button"
+                >
+                  {getSelectedLibraryName("css")}
+                </button>
               </summary>
 
               <div className="px-3 pb-3">
@@ -1823,6 +2070,76 @@ export function PostStudio() {
           </div>
         </section>
       </div>
+
+      {activeModalKind ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(4,3,8,0.72)] p-4"
+          onClick={closeLibraryModal}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-[rgba(148,163,184,0.18)] bg-[rgba(14,10,24,0.96)] shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.06)] px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--foreground)]">{getModalTitle(activeModalKind)}</p>
+              <Button onClick={closeLibraryModal} size="sm" variant="ghost">
+                Fechar
+              </Button>
+            </div>
+
+            <div className="grid gap-3 p-4">
+              <div className="grid gap-2 sm:grid-cols-[auto_auto_auto_auto_1fr]">
+                <Button onClick={handleModalCreate} size="sm" variant="secondary">
+                  <Plus className="h-4 w-4" />
+                  Novo
+                </Button>
+                <Button onClick={handleModalSaveCurrent} size="sm" variant="outline">
+                  <Save className="h-4 w-4" />
+                  Salvar
+                </Button>
+                <Button onClick={handleModalRename} size="sm" variant="outline">
+                  <Pencil className="h-4 w-4" />
+                  Renomear
+                </Button>
+                <Button onClick={handleModalDelete} size="sm" variant="ghost">
+                  <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
+                  Excluir
+                </Button>
+              </div>
+
+              <div className="max-h-[340px] overflow-auto rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(8,6,14,0.4)] p-2">
+                {modalItems.length === 0 ? (
+                  <p className="px-2 py-2 text-sm text-[var(--muted)]">Nenhum item salvo.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {modalItems.map((item) => {
+                      const isActive = item.id === modalSelectedId;
+                      return (
+                        <button
+                          className={cn(
+                            "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition",
+                            isActive
+                              ? "border-[rgba(96,165,250,0.28)] bg-[rgba(59,130,246,0.09)]"
+                              : "border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.015)] hover:bg-[rgba(255,255,255,0.03)]",
+                          )}
+                          key={item.id}
+                          onClick={() => handleModalSelect(item.id)}
+                          type="button"
+                        >
+                          <span className="truncate text-sm text-[var(--foreground)]">{item.name}</span>
+                          <span className="shrink-0 text-[11px] text-[var(--muted)]">
+                            {new Date(item.updatedAt).toLocaleDateString("pt-BR")}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="pointer-events-none fixed -left-[99999px] top-0">
         <div ref={exportRef}>
