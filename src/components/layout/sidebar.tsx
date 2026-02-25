@@ -11,7 +11,6 @@ import {
   Settings,
   SlidersHorizontal,
   Sparkles,
-  Trash2,
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,18 +40,6 @@ const navigationItems = [
     iconIdle: "border-[#34546d] bg-[rgba(18,30,45,0.82)] text-[#aceaff]",
     iconActive: "border-[#4f7b9d] bg-[rgba(89,201,255,0.14)] text-[#d9fbff]",
     titleActive: "text-[#ddf8ff]",
-  },
-  {
-    href: "/trash",
-    label: "Lixeira",
-    description: "Recupere cards excluidos",
-    icon: Trash2,
-    accentStripe: "bg-gradient-to-b from-[#ffc85a] to-[#ff8d60]",
-    activeBg:
-      "bg-[linear-gradient(145deg,rgba(255,200,90,0.12),rgba(255,141,96,0.08),rgba(31,18,52,0.92))]",
-    iconIdle: "border-[#68493d] bg-[rgba(43,26,22,0.82)] text-[#ffd4a2]",
-    iconActive: "border-[#936451] bg-[rgba(255,200,90,0.14)] text-[#ffe8c5]",
-    titleActive: "text-[#ffebd2]",
   },
   {
     href: "/settings",
