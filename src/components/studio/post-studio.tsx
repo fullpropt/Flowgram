@@ -91,6 +91,12 @@ const STUDIO_CANVAS_LOGO_GUARD_CSS = `
 }
 `;
 
+const STUDIO_CANVAS_EXPORT_GUARD_CSS = `
+.studio-canvas-root > * {
+  border-radius: 0 !important;
+}
+`;
+
 const DEFAULT_HTML = `<article class="post">
   <div class="post__glow post__glow--a"></div>
   <div class="post__glow post__glow--b"></div>
@@ -577,12 +583,14 @@ function StudioCanvas({
   width,
   height,
   className,
+  mode = "preview",
 }: {
   html: string;
   css: string;
   width: number;
   height: number;
   className?: string;
+  mode?: "preview" | "export";
 }) {
   const safeHtml = useMemo(() => sanitizeStructuralHtml(html), [html]);
   const safeCss = useMemo(() => sanitizeCssCode(css), [css]);
@@ -606,6 +614,7 @@ function StudioCanvas({
         }
         ${scopedCss}
         ${STUDIO_CANVAS_LOGO_GUARD_CSS}
+        ${mode === "export" ? STUDIO_CANVAS_EXPORT_GUARD_CSS : ""}
       `}</style>
       <div
         className="studio-canvas-root"
@@ -1000,7 +1009,12 @@ export function PostStudio() {
     try {
       const dataUrl = await toPng(exportRef.current, {
         cacheBust: true,
+        includeQueryParams: true,
         pixelRatio: 1,
+        fetchRequestInit: {
+          cache: "no-store",
+          credentials: "include",
+        },
       });
 
       const link = document.createElement("a");
@@ -1480,6 +1494,7 @@ export function PostStudio() {
             css={css}
             height={preset.height}
             html={html}
+            mode="export"
             width={preset.width}
           />
         </div>
