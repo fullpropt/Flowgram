@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FolderOpen, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Download, FolderOpen, Pencil, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -605,6 +605,58 @@ export function PostStudio() {
     setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} salvo com sucesso.`);
   }
 
+  function updateSelectedLibraryEntry(kind: "html" | "css") {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const selectedId = kind === "html" ? selectedHtmlId : selectedCssId;
+    const items = kind === "html" ? htmlLibrary : cssLibrary;
+    const setItems = kind === "html" ? setHtmlLibrary : setCssLibrary;
+    const currentContent = kind === "html" ? html.trim() : css.trim();
+
+    if (!currentContent) {
+      setErrorMessage(`Nao ha conteudo de ${kind === "html" ? "HTML" : "CSS"} para atualizar.`);
+      return;
+    }
+
+    const currentItem = items.find((item) => item.id === selectedId);
+    if (!currentItem) {
+      setErrorMessage(`Selecione ${kind === "html" ? "uma estrutura" : "um estilo"} para editar.`);
+      return;
+    }
+
+    const promptMessage = kind === "html" ? "Editar nome da estrutura HTML" : "Editar nome do estilo CSS";
+    const rawName = window.prompt(promptMessage, currentItem.name);
+    if (rawName === null) return;
+
+    const nextName = rawName.trim();
+    if (!nextName) {
+      setErrorMessage(`Informe um nome para ${kind === "html" ? "a estrutura" : "o estilo"}.`);
+      return;
+    }
+
+    const duplicateByName = items.find(
+      (item) => item.id !== currentItem.id && item.name.toLowerCase() === nextName.toLowerCase(),
+    );
+    if (duplicateByName) {
+      setErrorMessage(`Ja existe ${kind === "html" ? "uma estrutura" : "um estilo"} com esse nome.`);
+      return;
+    }
+
+    const updated = {
+      ...currentItem,
+      name: nextName,
+      content: currentContent,
+      updatedAt: Date.now(),
+    };
+
+    const nextItems = [updated, ...items.filter((item) => item.id !== currentItem.id)].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
+    setItems(nextItems);
+    setSuccessMessage(`${kind === "html" ? "Estrutura" : "Estilo"} atualizada.`);
+  }
+
   function removeSelectedLibraryEntry(kind: "html" | "css") {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -726,7 +778,7 @@ export function PostStudio() {
               </div>
 
               <div className="grid gap-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
                     onChange={(event) => {
@@ -760,6 +812,15 @@ export function PostStudio() {
                     <Plus className="h-4 w-4" />
                   </Button>
 
+                  <Button
+                    onClick={() => updateSelectedLibraryEntry("html")}
+                    size="icon"
+                    title="Editar item HTML selecionado"
+                    variant="outline"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+
                   <Button onClick={() => removeSelectedLibraryEntry("html")} size="sm" variant="ghost">
                     <Trash2 className="h-4 w-4 text-[#ff5f8c]" />
                   </Button>
@@ -780,7 +841,7 @@ export function PostStudio() {
               </div>
 
               <div className="grid gap-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
                   <select
                     className="h-10 rounded-xl border border-[var(--border)] bg-[rgba(19,12,36,0.84)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--ring)] focus:ring-2 focus:ring-[rgba(249,87,192,0.22)]"
                     onChange={(event) => {
@@ -812,6 +873,15 @@ export function PostStudio() {
                     variant="secondary"
                   >
                     <Plus className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    onClick={() => updateSelectedLibraryEntry("css")}
+                    size="icon"
+                    title="Editar item CSS selecionado"
+                    variant="outline"
+                  >
+                    <Pencil className="h-4 w-4" />
                   </Button>
 
                   <Button onClick={() => removeSelectedLibraryEntry("css")} size="sm" variant="ghost">
