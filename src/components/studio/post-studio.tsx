@@ -112,6 +112,114 @@ function sanitizeCode(input: string) {
   return input.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 }
 
+function scopeSelectorList(selectorList: string, rootSelector: string) {
+  return selectorList
+    .split(",")
+    .map((selector) => selector.trim())
+    .filter(Boolean)
+    .map((selector) => {
+      if (selector.startsWith(rootSelector)) return selector;
+      if (selector === "html" || selector === "body" || selector === ":root") {
+        return rootSelector;
+      }
+      if (selector.includes(":root")) {
+        return selector.replace(/:root/g, rootSelector);
+      }
+      return `${rootSelector} ${selector}`;
+    })
+    .join(", ");
+}
+
+function findMatchingBrace(source: string, openBraceIndex: number) {
+  let depth = 0;
+  let quote: "'" | '"' | null = null;
+
+  for (let i = openBraceIndex; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+
+    if (quote) {
+      if (char === "\\") {
+        i += 1;
+        continue;
+      }
+      if (char === quote) quote = null;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      const commentEnd = source.indexOf("*/", i + 2);
+      if (commentEnd === -1) return -1;
+      i = commentEnd + 1;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+
+  return -1;
+}
+
+function scopeStudioCss(css: string, rootSelector = ".studio-canvas-root"): string {
+  let output = "";
+  let cursor = 0;
+
+  while (cursor < css.length) {
+    const openIndex = css.indexOf("{", cursor);
+    if (openIndex === -1) {
+      output += css.slice(cursor);
+      break;
+    }
+
+    const selectorChunk = css.slice(cursor, openIndex);
+    const selector = selectorChunk.trim();
+    const closeIndex = findMatchingBrace(css, openIndex);
+
+    if (closeIndex === -1) {
+      output += css.slice(cursor);
+      break;
+    }
+
+    const body = css.slice(openIndex + 1, closeIndex);
+    const leadingWhitespace = selectorChunk.match(/^\s*/)?.[0] ?? "";
+    const trailingWhitespace = selectorChunk.match(/\s*$/)?.[0] ?? "";
+
+    if (!selector) {
+      output += `${selectorChunk}{${body}}`;
+      cursor = closeIndex + 1;
+      continue;
+    }
+
+    if (selector.startsWith("@")) {
+      if (/^@(media|supports|layer|container)\b/i.test(selector)) {
+        output += `${leadingWhitespace}${selector}${trailingWhitespace}{${scopeStudioCss(body, rootSelector)}}`;
+      } else {
+        output += `${leadingWhitespace}${selector}${trailingWhitespace}{${body}}`;
+      }
+      cursor = closeIndex + 1;
+      continue;
+    }
+
+    output += `${leadingWhitespace}${scopeSelectorList(selector, rootSelector)}${trailingWhitespace}{${body}}`;
+    cursor = closeIndex + 1;
+  }
+
+  return output;
+}
+
 function StudioCanvas({
   html,
   css,
@@ -127,6 +235,7 @@ function StudioCanvas({
 }) {
   const safeHtml = useMemo(() => sanitizeCode(html), [html]);
   const safeCss = useMemo(() => sanitizeCode(css), [css]);
+  const scopedCss = useMemo(() => scopeStudioCss(safeCss), [safeCss]);
 
   return (
     <div
@@ -144,7 +253,7 @@ function StudioCanvas({
           pointer-events: none;
           overflow: hidden;
         }
-        ${safeCss}
+        ${scopedCss}
       `}</style>
       <div
         className="studio-canvas-root"
